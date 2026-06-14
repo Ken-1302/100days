@@ -200,20 +200,24 @@
     const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
 
     function increment() {
-      if (count < 100) {
-        count++;
-        document.getElementById('counter').innerText = count;
-        
-        if (count === 100) {
-          triggerCelebration();
-        } else {
-          createHeart();
-        }
-      } else {
-        // Keeps creating background hearts if they continue to click after 100
-        createHeart(); 
-      }
+  if (count < 100) {
+    // Matches your exact folder structure: her/Celine/Celine (1).jpg
+    const nextImgSrc = `her/Celine/Celine (${count + 1}).jpg`; 
+    
+    spawnAndFlyImage(nextImgSrc, count);
+
+    count++;
+    document.getElementById('counter').innerText = count;
+    
+    if (count === 100) {
+      triggerCelebration();
+    } else {
+      createHeart();
     }
+  } else {
+    createHeart(); 
+  }
+}
 
     function createHeart() {
       const heart = document.createElement('div');
