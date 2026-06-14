@@ -18,7 +18,6 @@
       position: relative;
     }
 
-    /* Fixed full screen photo grid background wrapper */
     #grid-container {
       position: absolute;
       top: 0;
@@ -30,22 +29,20 @@
       margin: 0;
     }
 
-    /* 10x10 Grid layout using flexbox to split space evenly */
     .grid-row {
       display: flex;
-      height: 10vh; /* 10 rows = 100vh total */
+      height: 10vh;
       margin: 0;
       padding: 0;
     }
 
     .grid-slot {
-      flex: 1; /* 10 slots per row = 10% width each */
+      flex: 1;
       height: 100%;
       box-sizing: border-box;
       position: relative;
     }
 
-    /* The actual flying image element */
     .flying-photo {
       position: fixed;
       object-fit: cover;
@@ -57,7 +54,6 @@
       image-rendering: crisp-edges;
     }
 
-    /* Central control card wrapper */
     .card-wrapper {
       position: absolute;
       top: 0;
@@ -259,7 +255,6 @@
     let count = 0;
     const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
 
-    // Generate the baseline grid system automatically on load
     const gridContainer = document.getElementById('grid-container');
     let slotIdCounter = 0;
     for (let r = 0; r < 10; r++) {
@@ -277,7 +272,8 @@
 
     function increment() {
       if (count < 100) {
-        const nextImgSrc = `her/Celine/Celine (${count + 1}).jpg`; 
+        // FIXED PATH: Adjusted path since HTML is inside the 'her/' folder
+        const nextImgSrc = `Celine/Celine (${count + 1}).jpg`; 
         
         spawnAndFlyImage(nextImgSrc, count);
 
@@ -294,13 +290,11 @@
       }
     }
 
-    // --- BRINGING BACK THE MISSING IMAGE FLY LOGIC ---
     function spawnAndFlyImage(imgSrc, slotIndex) {
       const img = document.createElement('img');
       img.src = imgSrc;
       img.classList.add('flying-photo');
 
-      // Spawn large and semi-transparent in center of the screen
       const spawnWidth = Math.min(window.innerWidth * 0.7, 450);
       const spawnHeight = spawnWidth; 
       
@@ -313,7 +307,6 @@
 
       document.body.appendChild(img);
 
-      // Animate flying into its row/column grid slot
       setTimeout(() => {
         const targetSlot = document.getElementById(`slot-${slotIndex}`);
         if (!targetSlot) return;
@@ -329,7 +322,6 @@
       }, 800);
     }
 
-    // Recalculates positions perfectly if screen rotates or resizes
     window.addEventListener('resize', () => {
       const allPhotos = document.querySelectorAll('.flying-photo');
       allPhotos.forEach((img, idx) => {
