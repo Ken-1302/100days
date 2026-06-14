@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>100 days with my Celine</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #ffe5ec 0%, #ffc2d1 50%, #f7aef8 100%);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px 0 rgba(255, 75, 110, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      text-align: center;
+      z-index: 10;
+      max-width: 400px;
+      width: 80%;
+      transition: all 0.5s ease;
+    }
+
+    .card.celebrate {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 50px rgba(255, 71, 126, 0.8);
+      transform: scale(1.05);
+    }
+
+    h1 {
+      color: #ff477e;
+      font-size: 1.8rem;
+      margin-bottom: 5px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .subtitle {
+      color: #705a60;
+      font-size: 0.95rem;
+      margin-top: 0;
+      margin-bottom: 25px;
+      font-style: italic;
+    }
+
+    #counter-wrapper {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #ff477e;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .heart-icon {
+      font-size: 3rem;
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+
+    .heart-pulse {
+      animation: pulse 1.5s infinite;
+    }
+
+    .heart-explode {
+      animation: explodeHeart 1s ease-out forwards;
+    }
+
+    #increment-btn {
+      padding: 15px 35px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, #ff477e, #ff7096);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 71, 126, 0.4);
+      transition: all 0.3s ease;
+      outline: none;
+      margin-bottom: 30px;
+    }
+
+    #increment-btn:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 6px 20px rgba(255, 71, 126, 0.6);
+    }
+
+    /* Hidden by default, revealed after 100 clicks */
+    .countdown-container {
+      display: none;
+      border-top: 1px dashed rgba(255, 71, 126, 0.3);
+      padding-top: 20px;
+      animation: fadeIn 1s ease forwards;
+    }
+
+    .countdown-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    #countdown {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #9e0031;
+      text-shadow: 0 0 8px rgba(158, 0, 49, 0.3);
+      letter-spacing: 1px;
+    }
+
+    /* Background Elements */
+    .floating-heart {
+      position: absolute;
+      color: rgba(255, 71, 126, 0.4);
+      pointer-events: none;
+      font-size: 1.5rem;
+      animation: float 4s linear infinite;
+      bottom: -10%;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      pointer-events: none;
+      z-index: 5;
+      border-radius: 50%;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes pulse-fast {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes explodeHeart {
+      0% { transform: scale(1); }
+      30% { transform: scale(2.5) rotate(-15deg); filter: drop-shadow(0 0 20px #ff477e); }
+      100% { transform: scale(1.2); }
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-110vh) translateX(var(--random-x)) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes explodeConfetti {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="main-card">
+    <h1 id="main-title"></h1>
+    <p class="subtitle"></p>
+    
+    <div id="counter-wrapper">
+      <span class="heart-icon heart-pulse" id="main-heart">💖</span>
+      <span id="counter">0</span>
+    </div>
+    
+    <button id="increment-btn" onclick="increment()">Press Me</button>
+
+    <div class="countdown-container" id="countdown-section">
+      <div id="countdown">00d 00h 00m 00s</div>
+    </div>
+  </div>
+
+  <script>
+    let count = 0;
+    const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
+
+    function increment() {
+      if (count < 100) {
+        count++;
+        document.getElementById('counter').innerText = count;
+        
+        if (count === 100) {
+          triggerCelebration();
+        } else {
+          createHeart();
+        }
+      } else {
+        // Keeps creating background hearts if they continue to click after 100
+        createHeart(); 
+      }
+    }
+
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.classList.add('floating-heart');
+      heart.innerHTML = '❤️';
+      
+      const randomLeft = Math.random() * 100;
+      const randomSize = Math.random() * (2.5 - 1) + 1;
+      const randomXMovement = (Math.random() * 200 - 100) + 'px';
+      
+      heart.style.left = randomLeft + 'vw';
+      heart.style.fontSize = randomSize + 'rem';
+      heart.style.setProperty('--random-x', randomXMovement);
+      
+      const randomDuration = Math.random() * (5 - 3) + 3;
+      heart.style.animationDuration = randomDuration + 's';
+
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), randomDuration * 1000);
+    }
+
+    function triggerCelebration() {
+      const card = document.getElementById('main-card');
+      const heart = document.getElementById('main-heart');
+      const title = document.getElementById('main-title');
+      const countdownSection = document.getElementById('countdown-section');
+
+      card.classList.add('celebrate');
+      title.innerText = "Happy 100 Days! 🎉";
+      
+      heart.classList.remove('heart-pulse');
+      heart.classList.add('heart-explode');
+
+      // Unveil the ominous countdown segment
+      countdownSection.style.display = 'block';
+
+      for (let i = 0; i < 150; i++) {
+        createConfettiParticle();
+      }
+
+      setTimeout(() => {
+        card.classList.remove('celebrate');
+      }, 2000);
+      
+      // Initialize the clock ticker
+      startCountdown();
+    }
+
+    function createConfettiParticle() {
+      const confetti = document.createElement('div');
+      confetti.classList.add('confetti');
+      
+      confetti.style.left = '50vw';
+      confetti.style.top = '50vh';
+      
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.backgroundColor = color;
+      if (Math.random() > 0.5) confetti.style.borderRadius = '0px';
+
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = Math.random() * 300 + 100;
+      const x = Math.cos(angle) * velocity + 'px';
+      const y = Math.sin(angle) * velocity + 'px';
+      const rotation = (Math.random() * 720 - 360) + 'deg';
+
+      confetti.style.setProperty('--x', x);
+      confetti.style.setProperty('--y', y);
+      confetti.style.setProperty('--r', rotation);
+      
+      confetti.style.animation = `explodeConfetti ${Math.random() * 1.5 + 1}s cubic-bezier(0.1, 0.8, 0.3, 1) forwards`;
+
+      document.body.appendChild(confetti);
+      setTimeout(() => confetti.remove(), 2500);
+    }
+
+    // --- Countdown Timer Logic ---
+    function startCountdown() {
+      const targetDate = new Date("July 1, 2026 22:00:00").getTime();
+
+      const timerInterval = setInterval(function() {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        const dDisplay = String(days).padStart(2, '0');
+        const hDisplay = String(hours).padStart(2, '0');
+        const mDisplay = String(minutes).padStart(2, '0');
+        const sDisplay = String(seconds).padStart(2, '0');
+
+        document.getElementById("countdown").innerHTML = `${dDisplay}d ${hDisplay}h ${mDisplay}m ${sDisplay}s`;
+
+        // The Endgame text shift
+        if (distance < 0) {
+          clearInterval(timerInterval);
+          const clockElement = document.getElementById("countdown");
+          clockElement.innerHTML = "WILL YOU BE MINE?";
+          clockElement.style.color = "#ff0000";
+          clockElement.style.fontSize = "1.6rem";
+          clockElement.style.letterSpacing = "2px";
+          clockElement.style.animation = "pulse-fast 0.8s infinite";
+        }
+      }, 1000);
+    }
+  </script>
+
+</body>
+</html>
