@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>100 days with my Celine</title>
   
+  <!-- Bootstrap 3.4.1 for layout structure -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
-
+  <!-- Elegant cursive font -->
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
 
   <style>
@@ -20,7 +21,7 @@
       position: relative;
     }
 
-    /* Fixed full screen photo grid background wrapper */
+    /* Full screen photo grid background wrapper */
     #grid-container {
       position: absolute;
       top: 0;
@@ -32,32 +33,31 @@
       margin: 0;
     }
 
-    /* 10x10 Grid layout using flexbox to split space evenly */
     .grid-row {
       display: flex;
-      height: 10vh; /* 10 rows = 100vh total */
+      height: 10vh;
       margin: 0;
       padding: 0;
     }
 
     .grid-slot {
-      flex: 1; /* 10 slots per row = 10% width each */
+      flex: 1;
       height: 100%;
       box-sizing: border-box;
       position: relative;
     }
 
-    /* Cinematic Grey Dimming/Blur Overlay behind central image preview */
+    /* Cinematic Grey Dimming/Blur Overlay */
     #cinematic-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(40, 40, 45, 0.45); /* Elegant dark-grey translucent hue */
+      background: rgba(40, 40, 45, 0.45);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      z-index: 14; /* Right below the flying preview image layer (15) */
+      z-index: 14;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.4s ease;
@@ -65,9 +65,32 @@
 
     #cinematic-overlay.active {
       opacity: 1;
+      pointer-events: auto; /* Allows clicking on background to dismiss */
     }
 
-    /* The actual flying image element */
+    /* Dynamic Preview Caption Element */
+    #preview-caption-wrapper {
+      position: fixed;
+      left: 50%;
+      bottom: 8%;
+      transform: translateX(-50%);
+      z-index: 16;
+      text-align: center;
+      width: 80%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .preview-caption-text {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.8rem;
+      color: #ffffff;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 71, 126, 0.6);
+      margin: 0;
+    }
+
+    /* Flying images */
     .flying-photo {
       position: fixed;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -75,10 +98,9 @@
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
       pointer-events: none; 
-      z-index: 15; /* Sits on top of everything, including the card */
+      z-index: 15;
     }
 
-    /* Transition class handling the flight mode transformation changes */
     .flying-photo.docked {
       object-fit: cover;
       border: 2px solid white;
@@ -96,8 +118,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 5; /* Below the active image layer to let images pop in front */
+      z-index: 5;
       pointer-events: none;
+      transition: opacity 0.5s ease;
     }
 
     .card {
@@ -140,7 +163,7 @@
       font-size: 4rem;
       font-weight: bold;
       color: #ff477e;
-      margin-bottom: 25px; /* Added spacing to shift the button down gracefully */
+      margin-bottom: 25px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -151,7 +174,6 @@
     .heart-icon {
       font-size: 3rem;
       display: inline-block;
-      transition: transform 0.3s ease;
     }
 
     .heart-pulse {
@@ -162,21 +184,23 @@
       animation: explodeHeart 1s ease-out forwards;
     }
 
-    #increment-btn {
+    #increment-btn, #gallery-reveal-btn {
       padding: 15px 35px;
       font-size: 1.1rem;
       font-weight: bold;
-      background: linear-gradient(45deg, #ff477e, #ff7096);
       color: white;
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(255, 71, 126, 0.4);
-      transition: opacity 0.4s ease, transform 0.3s ease, box-shadow 0.3s ease;
+      transition: all 0.3s ease;
       outline: none;
-      margin-top: 10px; /* Forces button below counter naturally */
+      margin-top: 10px;
       margin-bottom: 10px;
-      opacity: 1;
+    }
+
+    #increment-btn {
+      background: linear-gradient(45deg, #ff477e, #ff7096);
+      box-shadow: 0 4px 15px rgba(255, 71, 126, 0.4);
     }
 
     #increment-btn:hover {
@@ -184,7 +208,14 @@
       box-shadow: 0 6px 20px rgba(255, 71, 126, 0.6);
     }
 
-    /* Elegant Cursive Centerpiece Message */
+    #gallery-reveal-btn {
+      background: linear-gradient(45deg, #ff7096, #f7aef8);
+      box-shadow: 0 4px 15px rgba(247, 174, 248, 0.4);
+      display: none;
+      opacity: 0;
+      margin: 15px auto 0 auto;
+    }
+
     #anniversary-message {
       display: none;
       font-family: 'Great Vibes', cursive;
@@ -197,7 +228,7 @@
       line-height: 1.2;
     }
 
-    /* Separate Floating Bottom Window Countdown */
+    /* Floating Separate Window at the Bottom for Countdown */
     .countdown-container {
       display: none;
       position: fixed;
@@ -235,6 +266,136 @@
       letter-spacing: 1px;
     }
 
+    /* --- 3D ROTATING CUBE GALLERY MODULE INTERFACE --- */
+    #cube-gallery-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 12, 15, 0.95);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      perspective: 1200px;
+    }
+
+    .gallery-stage {
+      width: 100%;
+      height: 80vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .cube-carousel {
+      position: relative;
+      width: 320px;
+      height: 420px;
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.2, 0.85, 0.32, 1.02);
+    }
+
+    .cube-card {
+      position: absolute;
+      width: 320px;
+      height: 420px;
+      left: 0;
+      top: 0;
+      background: #1a151a;
+      border: 6px solid white;
+      border-radius: 12px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      overflow: hidden;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transition: opacity 0.5s ease, filter 0.5s ease;
+    }
+
+    .cube-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Gallery HUD Controls */
+    .gallery-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      font-size: 2.5rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 110;
+      transition: all 0.3s ease;
+    }
+
+    .gallery-nav-btn:hover {
+      background: rgba(255, 71, 126, 0.4);
+      color: white;
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: 0 0 15px rgba(255, 71, 126, 0.4);
+    }
+
+    .nav-left { left: 40px; }
+    .nav-right { right: 40px; }
+
+    /* Elegant Interactive Caption Window Area */
+    .gallery-caption-box {
+      width: 100%;
+      height: 20vh;
+      text-align: center;
+      padding: 10px 40px;
+      box-sizing: border-box;
+    }
+
+    .caption-text {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.6rem;
+      color: #ff7096;
+      margin: 0;
+      text-shadow: 0 2px 10px rgba(255, 112, 150, 0.2);
+    }
+
+    .caption-subtext {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 0.9rem;
+      color: #aaa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .close-gallery-btn {
+      position: absolute;
+      top: 25px;
+      right: 35px;
+      background: none;
+      border: 2px solid rgba(255,255,255,0.4);
+      color: rgba(255,255,255,0.7);
+      font-size: 1rem;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 120;
+    }
+
+    .close-gallery-btn:hover {
+      border-color: #ff477e;
+      color: #ff477e;
+    }
+
+    /* Core animations */
     .floating-heart {
       position: absolute;
       color: rgba(255, 71, 126, 0.4);
@@ -285,11 +446,19 @@
 </head>
 <body>
 
+  <!-- Full Screen Photo Matrix Grid -->
   <div class="container-fluid" id="grid-container"></div>
 
-  <div id="cinematic-overlay"></div>
+  <!-- Cinematic Focus Overlay Backplane (Controls background clicking) -->
+  <div id="cinematic-overlay" onclick="forceActivePhotoToFly()"></div>
 
-  <div class="card-wrapper">
+  <!-- Shared Captions Wrapper for Active Previews -->
+  <div id="preview-caption-wrapper">
+    <p class="preview-caption-text" id="preview-caption-node"></p>
+  </div>
+
+  <!-- Interactive Control Panel Card Window Overlay -->
+  <div class="card-wrapper" id="primary-ui-wrapper">
     <div class="card" id="main-card">
       <h1 id="main-title">Happy 100 Days My Baby</h1>
       <p class="subtitle" id="main-subtitle">Every day with you is a blessing.</p>
@@ -302,34 +471,70 @@
       <button id="increment-btn" onclick="increment()">Press Me!</button>
 
       <div id="anniversary-message">Happy 100 day anniversary my baby!</div>
+
+      <button id="gallery-reveal-btn" onclick="openGallery()">View Gallery 🌸</button>
     </div>
   </div>
 
+  <!-- Floating Isolated Widget Bottom Phase Timer Window -->
   <div class="countdown-container" id="countdown-section">
     <div class="countdown-title">Time Remaining Until The Next Phase</div>
     <div id="countdown">00d 00h 00m 00s</div>
   </div>
 
+  <!-- Immersive 3D Matrix Rotating Cube Viewport Overlay Window Frame -->
+  <div id="cube-gallery-overlay">
+    <button class="close-gallery-btn" onclick="closeGallery()">✕ Close</button>
+    
+    <button class="gallery-nav-btn nav-left" onclick="rotateCube(-1)">‹</button>
+    <button class="gallery-nav-btn nav-right" onclick="rotateCube(1)">›</button>
+
+    <div class="gallery-stage">
+      <div class="cube-carousel" id="cube-wrapper"></div>
+    </div>
+
+    <div class="gallery-caption-box">
+      <div class="caption-text" id="photo-caption">Loading memory lane...</div>
+      <div class="caption-subtext" id="photo-index-tag">Memory 1 of 100</div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
   <script>
     let count = 0;
+    let isGalleryActive = false;
+    let currentActiveFlightTimeout = null; // References active timers to allow clean override clearing
+    let activeFlyingImageElement = null;   // Tracks active node processing target
+    let activeSlotIndexPointer = null;     // Tracks targeted slot storage positioning parameters
+    
     const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
     
-    // --- UPDATED CONFIGURATION FOR 110 PHOTOS ---
     const totalAvailableImages = 110; 
     let randomizedImagePool = [];
+
+    // Master Captions Database Pool List Array
+    const captionsPlaceholderList = [
+      "You look absolutely beautiful here... ✨",
+      "One of my favorite memories with you. ❤️",
+      "Every single smile of yours brightens my whole world.",
+      "The day I realized how incredibly lucky I am to have you.",
+      "Holding your hand makes everything else disappear."
+    ];
 
     for (let i = 1; i <= totalAvailableImages; i++) {
       randomizedImagePool.push(i);
     }
 
-    // Fisher-Yates Shuffle Algorithm to securely randomize order sequence
+    // Fisher-Yates Shuffle Algorithm
     for (let i = randomizedImagePool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [randomizedImagePool[i], randomizedImagePool[j]] = [randomizedImagePool[j], randomizedImagePool[i]];
     }
+
+    const definitiveSelection = randomizedImagePool.slice(0, 100);
 
     // Generate the baseline grid system automatically on load
     const gridContainer = document.getElementById('grid-container');
@@ -347,12 +552,28 @@
       gridContainer.appendChild(rowDiv);
     }
 
+    // Global Key Listener
+    window.addEventListener('keydown', (e) => {
+      if (e.code === "Space") {
+        e.preventDefault(); 
+        const btn = document.getElementById('increment-btn');
+        // Spacebar is blocked if button is disabled (photo is actively displaying)
+        if (btn && !btn.disabled && count < 100) {
+          btn.click();
+        }
+      }
+      if (isGalleryActive) {
+        if (e.key === "ArrowLeft") rotateCube(-1);
+        if (e.key === "ArrowRight") rotateCube(1);
+        if (e.key === "Escape") closeGallery();
+      }
+    });
+
     function increment() {
       if (count < 100) {
-        // Prevent click spamming while image is active in preview mode
         document.getElementById('increment-btn').disabled = true;
 
-        const chosenImageNumber = randomizedImagePool[count];
+        const chosenImageNumber = definitiveSelection[count];
         const nextImgSrc = `Celine/Celine (${chosenImageNumber}).webp`; 
         
         spawnAndFlyImage(nextImgSrc, count);
@@ -373,11 +594,12 @@
     function spawnAndFlyImage(imgSrc, slotIndex) {
       const img = document.createElement('img');
       const overlay = document.getElementById('cinematic-overlay');
+      const captionWrapper = document.getElementById('preview-caption-wrapper');
+      const captionTextNode = document.getElementById('preview-caption-node');
       
       img.src = imgSrc;
       img.classList.add('flying-photo');
 
-      // 1. Maintain original sizing constraints in the viewport view area
       img.style.maxWidth = '85vw';
       img.style.maxHeight = '65vh';
       img.style.width = 'auto';
@@ -388,40 +610,70 @@
       img.style.transform = 'translate(-50%, -50%) scale(0.8)';
 
       document.body.appendChild(img);
+      
+      // Update global trackers
+      activeFlyingImageElement = img;
+      activeSlotIndexPointer = slotIndex;
 
-      // Trigger the cinematic background overlay transition look
+      // Mount background dimmer overlay
       overlay.classList.add('active');
 
-      // Fade in and scale image naturally to its original sizing dimension aspect ratio
+      // Sync and reveal caption immediately beneath the photo
+      const pickedText = captionsPlaceholderList[slotIndex % captionsPlaceholderList.length];
+      captionTextNode.innerText = pickedText;
+      captionWrapper.style.opacity = '1';
+
       setTimeout(() => {
         img.style.opacity = '1';
         img.style.transform = 'translate(-50%, -50%) scale(1)';
       }, 50);
 
-      // 2. Holds full screen presentation preview safely for 5 seconds before undocking
-      setTimeout(() => {
-        const targetSlot = document.getElementById(`slot-${slotIndex}`);
-        if (!targetSlot) return;
+      // Initialize the standard 5-second automatic fallback timer
+      currentActiveFlightTimeout = setTimeout(() => {
+        sendActivePhotoToDock();
+      }, 5000); 
+    }
 
-        const rect = targetSlot.getBoundingClientRect();
-        
-        // Remove background overlay blur
-        overlay.classList.remove('active');
+    // --- STRATEGIC INTERCEPT TRIGGER: DETECTS OUTSIDE BACKDROP CLICKS ---
+    function forceActivePhotoToFly() {
+      // Clear out the active fallback scheduler queue loop immediately
+      if (currentActiveFlightTimeout) {
+        clearTimeout(currentActiveFlightTimeout);
+        currentActiveFlightTimeout = null;
+      }
+      sendActivePhotoToDock();
+    }
 
-        // Translate geometry dimensions out of fixed window constraints into slot frame parameters
-        img.classList.add('docked');
-        img.style.transform = 'none';
-        img.style.left = rect.left + 'px';
-        img.style.top = rect.top + 'px';
-        img.style.width = rect.width + 'px';
-        img.style.height = rect.height + 'px';
-        img.style.zIndex = '2';
+    function sendActivePhotoToDock() {
+      if (!activeFlyingImageElement) return;
 
-        // Re-enable click processing capabilities
-        if (count < 100) {
-          document.getElementById('increment-btn').disabled = false;
-        }
-      }, 5000); // 5000ms = 5 Seconds Center Hold
+      const overlay = document.getElementById('cinematic-overlay');
+      const captionWrapper = document.getElementById('preview-caption-wrapper');
+      const targetSlot = document.getElementById(`slot-${activeSlotIndexPointer}`);
+      
+      if (!targetSlot) return;
+      const rect = targetSlot.getBoundingClientRect();
+
+      // Lift backdrop blur and turn off captions smoothly
+      overlay.classList.remove('active');
+      captionWrapper.style.opacity = '0';
+
+      // Fire transformation geometry changes
+      activeFlyingImageElement.classList.add('docked');
+      activeFlyingImageElement.style.transform = 'none';
+      activeFlyingImageElement.style.left = rect.left + 'px';
+      activeFlyingImageElement.style.top = rect.top + 'px';
+      activeFlyingImageElement.style.width = rect.width + 'px';
+      activeFlyingImageElement.style.height = rect.height + 'px';
+      activeFlyingImageElement.style.zIndex = '2';
+
+      // Clear layout pointers
+      activeFlyingImageElement = null;
+
+      // Unlock button triggers so Celine can press space or tap to add the next image
+      if (count < 100) {
+        document.getElementById('increment-btn').disabled = false;
+      }
     }
 
     window.addEventListener('resize', () => {
@@ -436,6 +688,7 @@
           img.style.top = rect.top + 'px';
         }
       });
+      if (isGalleryActive) buildCubeLayout();
     });
 
     function createHeart() {
@@ -464,29 +717,31 @@
       const counterWrapper = document.getElementById('counter-wrapper');
       const btn = document.getElementById('increment-btn');
       const msg = document.getElementById('anniversary-message');
+      const galleryBtn = document.getElementById('gallery-reveal-btn');
       const countdownSection = document.getElementById('countdown-section');
 
       card.classList.add('celebrate');
-      
       heart.classList.remove('heart-pulse');
       heart.classList.add('heart-explode');
 
-      // 1. Remove interaction button smoothly
       btn.style.opacity = '0';
-      setTimeout(() => btn.remove(), 400);
+      setTimeout(() => {
+        btn.remove();
+        galleryBtn.style.display = 'block';
+        setTimeout(() => {
+          galleryBtn.style.opacity = '1';
+        }, 50);
+      }, 400);
 
-      // 2. Adjust gaps to translate heart details upward gracefully
       counterWrapper.style.transform = 'translateY(-15px)';
       counterWrapper.style.marginBottom = '5px';
 
-      // 3. Reveal cursive celebration marquee text
       msg.style.display = 'block';
       setTimeout(() => {
         msg.style.opacity = '1';
         msg.style.transform = 'scale(1)';
       }, 100);
 
-      // 4. Show the isolated bottom widget window countdown smoothly
       countdownSection.style.display = 'block';
       setTimeout(() => {
         countdownSection.style.opacity = '1';
@@ -502,6 +757,104 @@
       }, 2000);
       
       startCountdown();
+      initializeCubeData(); 
+    }
+
+    // --- 3D ROTATING CAROUSEL GALLERY VIEWPORT ---
+    let currentActiveCubeIndex = 0;
+    const radiusOf3DRing = 600; 
+
+    function initializeCubeData() {
+      const cubeWrapper = document.getElementById('cube-wrapper');
+      cubeWrapper.innerHTML = ''; 
+
+      definitiveSelection.forEach((imageNumber, index) => {
+        const item = document.createElement('div');
+        item.classList.add('cube-card');
+        item.id = `cube-card-${index}`;
+        
+        const img = document.createElement('img');
+        img.src = `Celine/Celine (${imageNumber}).webp`;
+        img.loading = "lazy"; 
+        
+        item.appendChild(img);
+        cubeWrapper.appendChild(item);
+      });
+    }
+
+    function buildCubeLayout() {
+      definitiveSelection.forEach((_, index) => {
+        const item = document.getElementById(`cube-card-${index}`);
+        if (!item) return;
+
+        const anglePerItem = 360 / 100;
+        const itemAngle = anglePerItem * index;
+        item.style.transform = `rotateY(${itemAngle}deg) translateZ(${radiusOf3DRing}px)`;
+      });
+      updateCubeRenderingState();
+    }
+
+    function rotateCube(direction) {
+      currentActiveCubeIndex = (currentActiveCubeIndex + direction + 100) % 100;
+      updateCubeRenderingState();
+    }
+
+    function updateCubeRenderingState() {
+      const cubeWrapper = document.getElementById('cube-wrapper');
+      const anglePerItem = 360 / 100;
+      
+      const finalCarouselAngleChange = -anglePerItem * currentActiveCubeIndex;
+      cubeWrapper.style.transform = `translateZ(-${radiusOf3DRing}px) rotateY(${finalCarouselAngleChange}deg)`;
+
+      definitiveSelection.forEach((_, index) => {
+        const item = document.getElementById(`cube-card-${index}`);
+        if (!item) return;
+
+        let spatialDifference = Math.abs(index - currentActiveCubeIndex);
+        if (spatialDifference > 50) spatialDifference = 100 - spatialDifference;
+
+        if (spatialDifference === 0) {
+          item.style.opacity = '1';
+          item.style.filter = 'none';
+          item.style.zIndex = '10';
+        } else if (spatialDifference <= 2) {
+          item.style.opacity = '0.45';
+          item.style.filter = 'blur(1.5px) grayscale(20%)';
+          item.style.zIndex = '5';
+        } else {
+          item.style.opacity = '0';
+          item.style.zIndex = '1';
+        }
+      });
+      
+      const pickedTextString = captionsPlaceholderList[currentActiveCubeIndex % captionsPlaceholderList.length];
+      document.getElementById('photo-caption').innerText = `${pickedTextString} (Photo #${definitiveSelection[currentActiveCubeIndex]})`;
+      document.getElementById('photo-index-tag').innerText = `Memory ${currentActiveCubeIndex + 1} of 100`;
+    }
+
+    function openGallery() {
+      isGalleryActive = true;
+      document.getElementById('primary-ui-wrapper').style.opacity = '0';
+      document.getElementById('primary-ui-wrapper').style.pointerEvents = 'none';
+      
+      const overlay = document.getElementById('cube-gallery-overlay');
+      overlay.style.display = 'block';
+      buildCubeLayout();
+      
+      setTimeout(() => {
+        overlay.style.opacity = '1';
+      }, 50);
+    }
+
+    function closeGallery() {
+      isGalleryActive = false;
+      const overlay = document.getElementById('cube-gallery-overlay');
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.getElementById('primary-ui-wrapper').style.opacity = '1';
+        document.getElementById('primary-ui-wrapper').style.pointerEvents = 'auto';
+      }, 500);
     }
 
     function createConfettiParticle() {
