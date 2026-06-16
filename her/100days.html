@@ -47,17 +47,43 @@
       position: relative;
     }
 
+    /* Cinematic Grey Dimming/Blur Overlay behind central image preview */
+    #cinematic-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(40, 40, 45, 0.45); /* Elegant dark-grey translucent hue */
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 14; /* Right below the flying preview image layer (15) */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #cinematic-overlay.active {
+      opacity: 1;
+    }
+
     /* The actual flying image element */
     .flying-photo {
       position: fixed;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      pointer-events: none; 
+      z-index: 15; /* Sits on top of everything, including the card */
+    }
+
+    /* Transition class handling the flight mode transformation changes */
+    .flying-photo.docked {
       object-fit: cover;
       border: 2px solid white;
       border-radius: 4px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-      pointer-events: none; /* Prevents blocking clicks once down in the grid */
     }
 
     /* Central control card wrapper */
@@ -70,7 +96,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 5; /* Lowered to let center preview images cover it */
+      z-index: 5; /* Below the active image layer to let images pop in front */
       pointer-events: none;
     }
 
@@ -114,7 +140,7 @@
       font-size: 4rem;
       font-weight: bold;
       color: #ff477e;
-      margin-bottom: 20px;
+      margin-bottom: 25px; /* Added spacing to shift the button down gracefully */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -148,6 +174,7 @@
       box-shadow: 0 4px 15px rgba(255, 71, 126, 0.4);
       transition: opacity 0.4s ease, transform 0.3s ease, box-shadow 0.3s ease;
       outline: none;
+      margin-top: 10px; /* Forces button below counter naturally */
       margin-bottom: 10px;
       opacity: 1;
     }
@@ -170,7 +197,7 @@
       line-height: 1.2;
     }
 
-    /* Separate Window at the Bottom for Countdown */
+    /* Separate Floating Bottom Window Countdown */
     .countdown-container {
       display: none;
       position: fixed;
@@ -185,7 +212,7 @@
       box-shadow: 0 8px 24px rgba(255, 71, 126, 0.2);
       border: 1px solid rgba(255, 255, 255, 0.6);
       text-align: center;
-      z-index: 30; /* Stays fixed above the grid layout */
+      z-index: 30; 
       opacity: 0;
       transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
@@ -260,6 +287,8 @@
 
   <div class="container-fluid" id="grid-container"></div>
 
+  <div id="cinematic-overlay"></div>
+
   <div class="card-wrapper">
     <div class="card" id="main-card">
       <h1 id="main-title">Happy 100 Days My Baby</h1>
@@ -288,12 +317,10 @@
     let count = 0;
     const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
     
-    // --- RANDOM SELECTION SYSTEM CONFIGURATION ---
-    // Change this number to match the exact maximum total images you have inside your folder!
-    const totalAvailableImages = 120; 
+    // --- UPDATED CONFIGURATION FOR 110 PHOTOS ---
+    const totalAvailableImages = 110; 
     let randomizedImagePool = [];
 
-    // Initialize array [1, 2, 3, ... totalAvailableImages]
     for (let i = 1; i <= totalAvailableImages; i++) {
       randomizedImagePool.push(i);
     }
@@ -322,7 +349,9 @@
 
     function increment() {
       if (count < 100) {
-        // Grabs a completely unique random index number from the pre-shuffled pool array
+        // Prevent click spamming while image is active in preview mode
+        document.getElementById('increment-btn').disabled = true;
+
         const chosenImageNumber = randomizedImagePool[count];
         const nextImgSrc = `Celine/Celine (${chosenImageNumber}).webp`; 
         
@@ -343,40 +372,60 @@
 
     function spawnAndFlyImage(imgSrc, slotIndex) {
       const img = document.createElement('img');
+      const overlay = document.getElementById('cinematic-overlay');
+      
       img.src = imgSrc;
       img.classList.add('flying-photo');
 
-      // Spawn large in center of the screen
-      const spawnWidth = Math.min(window.innerWidth * 0.7, 450);
-      const spawnHeight = spawnWidth; 
-      
-      img.style.width = spawnWidth + 'px';
-      img.style.height = spawnHeight + 'px';
-      img.style.left = (window.innerWidth / 2 - spawnWidth / 2) + 'px';
-      img.style.top = (window.innerHeight / 2 - spawnHeight / 2) + 'px';
-      img.style.opacity = '1';      // Crisp visibility for primary highlight look
-      img.style.zIndex = '15';     // Highest index layer to overlap card element cleanly
+      // 1. Maintain original sizing constraints in the viewport view area
+      img.style.maxWidth = '85vw';
+      img.style.maxHeight = '65vh';
+      img.style.width = 'auto';
+      img.style.height = 'auto';
+      img.style.opacity = '0';
+      img.style.left = '50%';
+      img.style.top = '45%';
+      img.style.transform = 'translate(-50%, -50%) scale(0.8)';
 
       document.body.appendChild(img);
 
-      // Animate flying down into target grid slot location
+      // Trigger the cinematic background overlay transition look
+      overlay.classList.add('active');
+
+      // Fade in and scale image naturally to its original sizing dimension aspect ratio
+      setTimeout(() => {
+        img.style.opacity = '1';
+        img.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 50);
+
+      // 2. Holds full screen presentation preview safely for 5 seconds before undocking
       setTimeout(() => {
         const targetSlot = document.getElementById(`slot-${slotIndex}`);
         if (!targetSlot) return;
 
         const rect = targetSlot.getBoundingClientRect();
+        
+        // Remove background overlay blur
+        overlay.classList.remove('active');
 
-        img.style.width = rect.width + 'px';
-        img.style.height = rect.height + 'px';
+        // Translate geometry dimensions out of fixed window constraints into slot frame parameters
+        img.classList.add('docked');
+        img.style.transform = 'none';
         img.style.left = rect.left + 'px';
         img.style.top = rect.top + 'px';
-        img.style.opacity = '1';
-        img.style.zIndex = '2';     // Drops behind control panels upon docking
-      }, 800);
+        img.style.width = rect.width + 'px';
+        img.style.height = rect.height + 'px';
+        img.style.zIndex = '2';
+
+        // Re-enable click processing capabilities
+        if (count < 100) {
+          document.getElementById('increment-btn').disabled = false;
+        }
+      }, 5000); // 5000ms = 5 Seconds Center Hold
     }
 
     window.addEventListener('resize', () => {
-      const allPhotos = document.querySelectorAll('.flying-photo');
+      const allPhotos = document.querySelectorAll('.flying-photo.docked');
       allPhotos.forEach((img, idx) => {
         const targetSlot = document.getElementById(`slot-${idx}`);
         if (targetSlot) {
@@ -494,12 +543,7 @@
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const dDisplay = String(days).padStart(2, '0');
-        const hDisplay = String(hours).padStart(2, '0');
-        const mDisplay = String(minutes).padStart(2, '0');
-        const sDisplay = String(seconds).padStart(2, '0');
-
-        document.getElementById("countdown").innerHTML = `${dDisplay}d ${hDisplay}h ${mDisplay}m ${sDisplay}s`;
+        document.getElementById("countdown").innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
         if (distance < 0) {
           clearInterval(timerInterval);
