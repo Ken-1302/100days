@@ -204,8 +204,13 @@
     align-items: center;
     z-index: 10;
     pointer-events: none;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.5s ease, align-items 0.9s var(--ease-silk);
     padding: 20px;
+  }
+
+  .card-wrapper.settled {
+    align-items: flex-end;
+    padding-bottom: clamp(24px, 5vh, 56px);
   }
 
   .card {
@@ -219,7 +224,9 @@
     text-align: center;
     max-width: 420px;
     width: 100%;
-    transition: transform 0.6s var(--ease-silk), box-shadow 0.6s var(--ease-silk);
+    transition: transform 0.9s var(--ease-silk), box-shadow 0.9s var(--ease-silk),
+                background 0.9s var(--ease-silk), backdrop-filter 0.9s var(--ease-silk),
+                padding 0.9s var(--ease-silk), max-width 0.9s var(--ease-silk);
     pointer-events: auto;
     position: relative;
   }
@@ -231,11 +238,28 @@
     border: 1px solid rgba(201, 161, 92, 0.35);
     border-radius: 14px;
     pointer-events: none;
+    transition: opacity 0.9s ease;
   }
 
   .card.celebrate {
     transform: scale(1.04);
     box-shadow: 0 0 0 1px rgba(201, 161, 92, 0.4), 0 30px 80px -10px rgba(157, 36, 73, 0.5);
+  }
+
+  /* A few seconds after the 100th photo lands, the card steps back so the
+     collage takes center stage — smaller, softer, and out of the way. */
+  .card.settled {
+    transform: scale(0.74);
+    max-width: 320px;
+    padding: 28px 26px 24px;
+    background: rgba(255, 252, 249, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 12px 34px -10px rgba(157, 36, 73, 0.22);
+  }
+
+  .card.settled::before {
+    opacity: 0.4;
   }
 
   .eyebrow {
@@ -1031,9 +1055,18 @@
 
     setTimeout(() => card.classList.remove('celebrate'), 2200);
 
+    // A few seconds in, once the burst has had its moment, let the card
+    // step back so the finished collage can actually be seen.
+    setTimeout(settleCard, 3200);
+
     setTimeout(revealCountdown, 4500);
     startCountdown();
     initializeCubeData();
+  }
+
+  function settleCard() {
+    document.getElementById('main-card').classList.add('settled');
+    document.getElementById('primary-ui-wrapper').classList.add('settled');
   }
 
   // ---------- 3D keepsake carousel ----------
