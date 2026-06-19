@@ -512,10 +512,11 @@
     
     const colors = ['#ff477e', '#ff7096', '#ff85a1', '#f7aef8', '#fff', '#ffd166', '#06d6a0'];
     
-    const totalAvailableImages = 110; 
+    const totalAvailableImages = 111; 
     let randomizedImagePool = [];
+    let externalCaptionsArray = []; // Dynamic storage for loaded custom captions
 
-    // Master Captions Database Pool List Array
+    // Fallback Array Pool in case file isn't loaded/ready
     const captionsPlaceholderList = [
       "You look absolutely beautiful here... ✨",
       "One of my favorite memories with you. ❤️",
@@ -523,6 +524,36 @@
       "The day I realized how incredibly lucky I am to have you.",
       "Holding your hand makes everything else disappear."
     ];
+
+    // --- EXTERNAL ASSET PARSING ENGINE ---
+    function loadExternalCaptions() {
+      fetch('celineCaptions.txt')
+        .then(response => {
+          if (!response.ok) throw new Error("Network issue or file missing");
+          return response.text();
+        })
+        .then(data => {
+          // Split file line-by-line and remove structural white spaces
+          externalCaptionsArray = data.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          console.log("Custom captions loaded successfully: " + externalCaptionsArray.length + " lines found.");
+        })
+        .catch(err => {
+          console.warn("Could not fetch celineCaptions.txt, parsing default fallbacks.", err);
+        });
+    }
+
+    // Initialize Caption Pulling Task immediately on system startup
+    loadExternalCaptions();
+
+    // Helper helper to dynamically map safe array allocations
+    function getCaptionForImage(imageNumber) {
+      if (externalCaptionsArray.length >= imageNumber) {
+        // Maps line number directly (Line 1 = Index 0)
+        return externalCaptionsArray[imageNumber - 1];
+      }
+      // Safety net modular fallback mapping
+      return captionsPlaceholderList[imageNumber % captionsPlaceholderList.length];
+    }
 
     for (let i = 1; i <= totalAvailableImages; i++) {
       randomizedImagePool.push(i);
@@ -557,7 +588,6 @@
       if (e.code === "Space") {
         e.preventDefault(); 
         const btn = document.getElementById('increment-btn');
-        // Spacebar is blocked if button is disabled (photo is actively displaying)
         if (btn && !btn.disabled && count < 100) {
           btn.click();
         }
@@ -576,7 +606,7 @@
         const chosenImageNumber = definitiveSelection[count];
         const nextImgSrc = `Celine/Celine (${chosenImageNumber}).webp`; 
         
-        spawnAndFlyImage(nextImgSrc, count);
+        spawnAndFlyImage(nextImgSrc, count, chosenImageNumber);
 
         count++;
         document.getElementById('counter').innerText = count;
@@ -591,7 +621,7 @@
       }
     }
 
-    function spawnAndFlyImage(imgSrc, slotIndex) {
+    function spawnAndFlyImage(imgSrc, slotIndex, imageNumber) {
       const img = document.createElement('img');
       const overlay = document.getElementById('cinematic-overlay');
       const captionWrapper = document.getElementById('preview-caption-wrapper');
@@ -611,15 +641,13 @@
 
       document.body.appendChild(img);
       
-      // Update global trackers
       activeFlyingImageElement = img;
       activeSlotIndexPointer = slotIndex;
 
-      // Mount background dimmer overlay
       overlay.classList.add('active');
 
-      // Sync and reveal caption immediately beneath the photo
-      const pickedText = captionsPlaceholderList[slotIndex % captionsPlaceholderList.length];
+      // Sync and reveal caption from parsed text file line list tracking
+      const pickedText = getCaptionForImage(imageNumber);
       captionTextNode.innerText = pickedText;
       captionWrapper.style.opacity = '1';
 
@@ -628,15 +656,12 @@
         img.style.transform = 'translate(-50%, -50%) scale(1)';
       }, 50);
 
-      // Initialize the standard 5-second automatic fallback timer
       currentActiveFlightTimeout = setTimeout(() => {
         sendActivePhotoToDock();
       }, 5000); 
     }
 
-    // --- STRATEGIC INTERCEPT TRIGGER: DETECTS OUTSIDE BACKDROP CLICKS ---
     function forceActivePhotoToFly() {
-      // Clear out the active fallback scheduler queue loop immediately
       if (currentActiveFlightTimeout) {
         clearTimeout(currentActiveFlightTimeout);
         currentActiveFlightTimeout = null;
@@ -654,11 +679,9 @@
       if (!targetSlot) return;
       const rect = targetSlot.getBoundingClientRect();
 
-      // Lift backdrop blur and turn off captions smoothly
       overlay.classList.remove('active');
       captionWrapper.style.opacity = '0';
 
-      // Fire transformation geometry changes
       activeFlyingImageElement.classList.add('docked');
       activeFlyingImageElement.style.transform = 'none';
       activeFlyingImageElement.style.left = rect.left + 'px';
@@ -667,10 +690,8 @@
       activeFlyingImageElement.style.height = rect.height + 'px';
       activeFlyingImageElement.style.zIndex = '2';
 
-      // Clear layout pointers
       activeFlyingImageElement = null;
 
-      // Unlock button triggers so Celine can press space or tap to add the next image
       if (count < 100) {
         document.getElementById('increment-btn').disabled = false;
       }
@@ -827,8 +848,9 @@
         }
       });
       
-      const pickedTextString = captionsPlaceholderList[currentActiveCubeIndex % captionsPlaceholderList.length];
-      document.getElementById('photo-caption').innerText = `${pickedTextString} (Photo #${definitiveSelection[currentActiveCubeIndex]})`;
+      const activeImgNum = definitiveSelection[currentActiveCubeIndex];
+      const pickedTextString = getCaptionForImage(activeImgNum);
+      document.getElementById('photo-caption').innerText = `${pickedTextString} (Photo #${activeImgNum})`;
       document.getElementById('photo-index-tag').innerText = `Memory ${currentActiveCubeIndex + 1} of 100`;
     }
 
