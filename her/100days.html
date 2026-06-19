@@ -948,8 +948,6 @@
 
     if (count < TOTAL_DAYS) {
       document.getElementById('increment-btn').disabled = false;
-    } else {
-      setTimeout(revealCountdown, 4500);
     }
   }
 
@@ -1033,6 +1031,7 @@
 
     setTimeout(() => card.classList.remove('celebrate'), 2200);
 
+    setTimeout(revealCountdown, 4500);
     startCountdown();
     initializeCubeData();
   }
