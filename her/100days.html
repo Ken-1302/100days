@@ -176,16 +176,6 @@
     line-height: 1.35;
   }
 
-  .preview-photo-index {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--gold-soft);
-    margin: 0 0 10px 0;
-    font-weight: 500;
-  }
-
   .flying-photo {
     position: fixed;
     box-shadow: 0 25px 60px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2);
@@ -652,7 +642,6 @@
 <p id="skip-hint">Tap anywhere to continue</p>
 
 <div id="preview-caption-wrapper" aria-live="polite">
-  <p class="preview-photo-index" id="preview-photo-index"></p>
   <p class="preview-caption-text" id="preview-caption-node"></p>
 </div>
 
@@ -887,7 +876,6 @@
     const overlay = document.getElementById('cinematic-overlay');
     const captionWrapper = document.getElementById('preview-caption-wrapper');
     const captionTextNode = document.getElementById('preview-caption-node');
-    const captionIndexNode = document.getElementById('preview-photo-index');
 
     img.src = imgSrc;
     img.alt = `Memory ${slotIndex + 1} of ${TOTAL_DAYS}`;
@@ -908,7 +896,6 @@
 
     overlay.classList.add('active');
 
-    captionIndexNode.innerText = `Day ${slotIndex + 1}`;
     captionTextNode.innerText = getCaptionForImage(imageNumber);
     captionWrapper.classList.add('visible');
 
