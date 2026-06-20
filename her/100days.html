@@ -675,10 +675,12 @@
   }
 
   /* ---------- Gallery companions — Flareon & Sylveon flanking the photo ---------- */
-  /* Both sit a fixed distance from the gallery stage's own left/right
-     border (not a percentage, not relative to the photo) — so they're
-     always equally far from the edge of the screen no matter how wide
-     or narrow the active photo happens to be. */
+  /* Their horizontal position is calculated in JS (positionMascots()) so
+     they always sit a small fixed gap from the active photo's actual
+     edge — narrow portrait photos and wide landscape photos both get
+     correctly placed mascots that hug the photo rather than sitting
+     pinned at the sides of the screen. A safety clamp keeps them from
+     ever crowding the screen's own edge if a photo gets very wide. */
   .gallery-mascot {
     position: absolute;
     top: 50%;
@@ -691,8 +693,8 @@
     cursor: pointer;
   }
 
-  .mascot-left { left: var(--mascot-border-inset, 70px); }
-  .mascot-right { left: calc(100% - var(--mascot-border-inset, 70px)); }
+  .mascot-left { left: 18%; }
+  .mascot-right { left: 82%; }
 
   .gallery-mascot:hover,
   .gallery-mascot:focus-visible {
@@ -1510,6 +1512,12 @@
         if (img.naturalWidth && img.naturalHeight) {
           item.style.setProperty('--card-ratio', `${img.naturalWidth} / ${img.naturalHeight}`);
         }
+        // A lazy-loaded image can finish resizing its card well after the
+        // initial measurement ran — if this is the card currently on
+        // screen, the mascots' position needs to be recalculated.
+        if (index === currentActiveCubeIndex) {
+          requestAnimationFrame(positionMascots);
+        }
       });
 
       item.appendChild(img);
@@ -1571,6 +1579,54 @@
     } else {
       indexTag.innerText = `✦ A Secret Memory ✦`;
     }
+
+    // Deferred one frame so the active card's box has settled (its size
+    // change from aspect-ratio is instant, but giving layout a frame to
+    // catch up keeps the measurement reliable).
+    requestAnimationFrame(positionMascots);
+  }
+
+  // ---------- Keep Flareon and Sylveon close to whichever photo is
+  // currently active — a small gap from the photo's actual edge, not
+  // pinned to the sides of the screen. A safety clamp keeps them from
+  // crowding the screen's own edge if a photo happens to be very wide. ----------
+  const MASCOT_GAP_PX = 24;
+  const MASCOT_SCREEN_MARGIN_PX = 24;
+
+  function positionMascots() {
+    const stage = document.querySelector('.gallery-stage');
+    const sylveonImg = document.getElementById('mascot-sylveon');
+    const flareonImg = document.getElementById('mascot-flareon');
+    const activeCard = document.getElementById(`cube-card-${currentActiveCubeIndex}`);
+    if (!stage || !sylveonImg || !flareonImg || !activeCard) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+    if (cardRect.width === 0 || stageRect.width === 0) return; // not yet laid out — CSS fallback holds
+
+    const sylveonHalfWidth = sylveonImg.getBoundingClientRect().width / 2;
+    const flareonHalfWidth = flareonImg.getBoundingClientRect().width / 2;
+
+    // Card edges relative to the stage, since mascots are positioned
+    // with `left` relative to that same stage.
+    const cardLeftInStage = cardRect.left - stageRect.left;
+    const cardRightInStage = cardRect.right - stageRect.left;
+
+    // left CSS value is the mascot's CENTER (transform: translate(-50%, -50%)),
+    // so the gap is measured from the photo edge to the mascot's near edge.
+    let sylveonLeft = cardLeftInStage - MASCOT_GAP_PX - sylveonHalfWidth;
+    let flareonLeft = cardRightInStage + MASCOT_GAP_PX + flareonHalfWidth;
+
+    // Safety clamp: never let either mascot's nearest edge get closer to
+    // the actual screen/stage border than MASCOT_SCREEN_MARGIN_PX, even
+    // if a wide landscape photo would otherwise push it that far out.
+    const sylveonMinLeft = MASCOT_SCREEN_MARGIN_PX + sylveonHalfWidth;
+    const flareonMaxLeft = stageRect.width - MASCOT_SCREEN_MARGIN_PX - flareonHalfWidth;
+    sylveonLeft = Math.max(sylveonLeft, sylveonMinLeft);
+    flareonLeft = Math.min(flareonLeft, flareonMaxLeft);
+
+    sylveonImg.style.left = `${sylveonLeft}px`;
+    flareonImg.style.left = `${flareonLeft}px`;
   }
 
   // ---------- Gallery mascots — Sylveon and Flareon play a sound on click ----------
