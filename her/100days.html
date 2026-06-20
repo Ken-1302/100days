@@ -969,13 +969,38 @@
     // sans_talking.mp3 — used for most lines, retriggered per character.
     const sansTalking = new Audio('sans_talking.mp3');
     sansTalking.volume = 0.5;
+    sansTalking.preload = 'auto';
 
     // voice_sans.mp3 — the single short "urh" sample, used for "Enjoy."
     // where it's asked to play TWICE per character instead of once.
     const voiceSans = new Audio('voice_sans.mp3');
     voiceSans.volume = 0.5;
+    voiceSans.preload = 'auto';
     const voiceSansEcho = new Audio('voice_sans.mp3');
     voiceSansEcho.volume = 0.5;
+    voiceSansEcho.preload = 'auto';
+
+    // The very first time an <audio> element plays, the browser may still
+    // be fetching/decoding it — that cold-start delay is what was making
+    // the sound trail behind the very first characters typed. Forcing
+    // .load() immediately, and waiting for it to actually be ready before
+    // typing begins, closes that gap. A safety timeout keeps the intro
+    // from hanging if a file is slow or missing.
+    function waitUntilReady(audioEl, timeoutMs) {
+      return new Promise((resolve) => {
+        if (audioEl.readyState >= 3) { resolve(); return; }
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          audioEl.removeEventListener('canplaythrough', done);
+          resolve();
+        };
+        audioEl.addEventListener('canplaythrough', done);
+        audioEl.load();
+        setTimeout(done, timeoutMs);
+      });
+    }
 
     function playSoundForLine(soundType) {
       if (reduceMotion) return;
@@ -1070,7 +1095,19 @@
     overlay.addEventListener('click', advance);
     window.addEventListener('keydown', introKeyHandler);
 
-    typeLine();
+    // Wait for the talking sound to actually be ready before the first
+    // character ever types — this is what closes the gap between text
+    // and sound on box 1, since that's where the cold-start delay was
+    // most noticeable. Capped at 700ms so a slow connection or missing
+    // file never holds up the opening message for long.
+    waitUntilReady(sansTalking, 700).then(() => {
+      typeLine();
+    });
+    // voiceSans/voiceSansEcho aren't on the critical path for the very
+    // first character, but kicking off their loading now too means
+    // they're already warm well before box 4 ("Enjoy.") is reached.
+    voiceSans.load();
+    voiceSansEcho.load();
   })();
 
   const captionsPlaceholderList = [
