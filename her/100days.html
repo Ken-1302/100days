@@ -644,15 +644,19 @@
      --card-ratio in JS once the image loads) — landscape photos get a
      wide frame, portraits a tall one, squares a square one. aspect-ratio
      keeps that true proportion intact even when capped by max-width/
-     max-height, so there's never a black letterbox bar padding it out. */
+     max-height, so there's never a black letterbox bar padding it out.
+     Since cards vary in width/height per photo, each is centered on the
+     carousel's own center point (left/top 50% + translate -50%) rather
+     than anchored at a fixed top-left corner — otherwise wider landscape
+     cards would extend off to one side instead of staying centered. */
   .cube-card {
     position: absolute;
     aspect-ratio: var(--card-ratio, 3 / 4);
     width: auto;
     height: min(64vh, 520px);
     max-width: min(80vw, 640px);
-    left: 0;
-    top: 0;
+    left: 50%;
+    top: 50%;
     background: #1a1014;
     border: 7px solid #fff;
     border-radius: 6px;
@@ -671,19 +675,25 @@
   }
 
   /* ---------- Gallery companions — Flareon & Sylveon flanking the photo ---------- */
+  /* Their horizontal position is calculated in JS (positionMascots()) so
+     they always sit the same fixed gap from the active photo's actual
+     edge — narrow portrait photos and wide landscape photos both get
+     correctly equidistant mascots, never a lopsided or crowded gap.
+     The 25%/75% here only matters for the very first paint, before JS
+     has measured anything yet. */
   .gallery-mascot {
     position: absolute;
     top: 50%;
+    left: 25%;
     width: clamp(90px, 12vw, 160px);
     height: auto;
     transform: translate(-50%, -50%);
     z-index: 5;
     filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5));
-    transition: filter 0.3s ease;
+    transition: left 0.4s var(--ease-silk), filter 0.3s ease;
     cursor: pointer;
   }
 
-  .mascot-left { left: 25%; }
   .mascot-right { left: 75%; }
 
   .gallery-mascot:hover,
@@ -1473,6 +1483,13 @@
         if (img.naturalWidth && img.naturalHeight) {
           item.style.setProperty('--card-ratio', `${img.naturalWidth} / ${img.naturalHeight}`);
         }
+        // If this card just became correctly sized AND it's the one
+        // currently on screen, the mascots' gap needs to be recalculated —
+        // a lazy-loaded image can finish resizing its card well after the
+        // initial measurement ran.
+        if (index === currentActiveCubeIndex) {
+          requestAnimationFrame(positionMascots);
+        }
       });
 
       item.appendChild(img);
@@ -1487,7 +1504,11 @@
       const item = document.getElementById(`cube-card-${index}`);
       if (!item) return;
       const itemAngle = anglePerItem * index;
-      item.style.transform = `rotateY(${itemAngle}deg) translateZ(${CUBE_RADIUS}px)`;
+      // translate(-50%, -50%) must come FIRST: it centers the card on its
+      // own left:50%/top:50% anchor (so varying widths from different
+      // photo aspect ratios stay centered) before rotateY/translateZ
+      // place that already-centered card into the 3D ring.
+      item.style.transform = `translate(-50%, -50%) rotateY(${itemAngle}deg) translateZ(${CUBE_RADIUS}px)`;
     });
     updateCubeRenderingState();
   }
@@ -1530,6 +1551,45 @@
     } else {
       indexTag.innerText = `✦ A Secret Memory ✦`;
     }
+
+    // Deferred one frame so the active card's box has settled (its size
+    // change from aspect-ratio is instant, but giving layout a frame to
+    // catch up keeps the measurement reliable).
+    requestAnimationFrame(positionMascots);
+  }
+
+  // ---------- Keep Flareon and Sylveon equidistant from whichever photo
+  // is currently active, regardless of whether it's landscape, portrait,
+  // or square. Measures the active card's real rendered edges and places
+  // each mascot a fixed gap outside them. ----------
+  const MASCOT_GAP_PX = 28;
+
+  function positionMascots() {
+    const stage = document.querySelector('.gallery-stage');
+    const sylveonImg = document.getElementById('mascot-sylveon');
+    const flareonImg = document.getElementById('mascot-flareon');
+    const activeCard = document.getElementById(`cube-card-${currentActiveCubeIndex}`);
+    if (!stage || !sylveonImg || !flareonImg || !activeCard) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+    if (cardRect.width === 0) return; // not yet laid out — fallback CSS % holds until next call
+
+    const sylveonHalfWidth = sylveonImg.getBoundingClientRect().width / 2;
+    const flareonHalfWidth = flareonImg.getBoundingClientRect().width / 2;
+
+    // Card edges relative to the stage, since mascots are positioned
+    // with `left` relative to that same stage.
+    const cardLeftInStage = cardRect.left - stageRect.left;
+    const cardRightInStage = cardRect.right - stageRect.left;
+
+    // left CSS value is the mascot's CENTER (transform: translate(-50%, -50%)),
+    // so the gap is measured from the photo edge to the mascot's near edge.
+    const sylveonLeft = cardLeftInStage - MASCOT_GAP_PX - sylveonHalfWidth;
+    const flareonLeft = cardRightInStage + MASCOT_GAP_PX + flareonHalfWidth;
+
+    sylveonImg.style.left = `${sylveonLeft}px`;
+    flareonImg.style.left = `${flareonLeft}px`;
   }
 
   // ---------- Gallery mascots — Sylveon and Flareon play a sound on click ----------
