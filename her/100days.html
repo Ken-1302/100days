@@ -1580,10 +1580,30 @@
       indexTag.innerText = `✦ A Secret Memory ✦`;
     }
 
-    // Deferred one frame so the active card's box has settled (its size
-    // change from aspect-ratio is instant, but giving layout a frame to
-    // catch up keeps the measurement reliable).
-    requestAnimationFrame(positionMascots);
+    // Wait for the carousel's own 0.65s rotation transition to actually
+    // finish before measuring the active card — measuring mid-rotation
+    // (e.g. on the very next animation frame) catches the card partway
+    // through its 3D move and produces a stale, oversized, asymmetric
+    // gap. transitionend gives the true resting position; the timeout
+    // is a safety net in case the event doesn't fire for any reason.
+    schedulePositionMascots();
+  }
+
+  let mascotPositionTimeout = null;
+  function schedulePositionMascots() {
+    const cubeWrapper = document.getElementById('cube-wrapper');
+    if (mascotPositionTimeout) clearTimeout(mascotPositionTimeout);
+
+    let settled = false;
+    const onSettled = () => {
+      if (settled) return;
+      settled = true;
+      cubeWrapper.removeEventListener('transitionend', onSettled);
+      positionMascots();
+    };
+    cubeWrapper.addEventListener('transitionend', onSettled);
+    // Safety net slightly longer than the 0.65s carousel transition.
+    mascotPositionTimeout = setTimeout(onSettled, 750);
   }
 
   // ---------- Keep Flareon and Sylveon close to whichever photo is
