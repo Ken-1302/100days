@@ -256,7 +256,7 @@
     box-shadow: 0 0 0 1px rgba(201, 161, 92, 0.5), 0 40px 100px -10px rgba(157, 36, 73, 0.6);
   }
 
-  /* ---------- Final floating message — all that remains after the card fades ---------- */
+  /* ---------- Final message slot — message and gallery button share this spot ---------- */
   #final-message {
     position: fixed;
     top: 50%;
@@ -274,9 +274,28 @@
   #final-message.visible {
     opacity: 1;
     transform: translate(-50%, -50%) translateY(0);
+    pointer-events: auto;
   }
 
-  #final-message .final-title {
+  #message-content,
+  #gallery-button-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    opacity: 0;
+    transition: opacity 1s var(--ease-soft);
+    pointer-events: none;
+  }
+
+  #message-content.shown,
+  #gallery-button-content.shown {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .final-title {
     font-family: 'Cormorant Garamond', serif;
     font-style: italic;
     font-weight: 600;
@@ -287,7 +306,7 @@
     text-shadow: 0 8px 40px rgba(157, 36, 73, 0.65), 0 2px 12px rgba(0,0,0,0.3);
   }
 
-  #final-message .final-sub {
+  .final-sub {
     display: block;
     font-family: 'Outfit', sans-serif;
     font-size: 0.8rem;
@@ -316,47 +335,6 @@
     0% { opacity: 0; transform: scale(0.6); }
     18% { opacity: 1; transform: scale(1.15); }
     100% { opacity: 0; transform: scale(1.8); }
-  }
-
-  /* ---------- Gallery hover dock (bottom edge reveal) ---------- */
-  /* Thin strip right at the screen edge — just enough to sense an
-     approaching cursor without covering the bottom row of photos. */
-  #gallery-dock-trigger {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 18px;
-    z-index: 31;
-    display: none;
-  }
-
-  #gallery-dock-trigger.enabled {
-    display: block;
-  }
-
-  #gallery-dock {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translate(-50%, 100%);
-    z-index: 32;
-    padding: 20px 20px 26px;
-    display: none;
-    justify-content: center;
-    transition: transform 0.5s var(--ease-silk);
-    pointer-events: none;
-  }
-
-  #gallery-dock.enabled {
-    display: flex;
-  }
-
-  #gallery-dock.revealed,
-  #gallery-dock-trigger:hover + #gallery-dock,
-  #gallery-dock:hover {
-    transform: translate(-50%, 0);
-    pointer-events: auto;
   }
 
   #open-gallery-btn {
@@ -497,20 +475,20 @@
     letter-spacing: 0.3px;
   }
 
-  /* ---------- Countdown — numbers only, no labels ---------- */
+  /* ---------- Countdown — small, bottom of screen, numbers only ---------- */
   .countdown-container {
     display: none;
     position: fixed;
-    top: 34px;
+    bottom: 18px;
     left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    background: rgba(20, 9, 13, 0.32);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    padding: 16px 34px;
+    transform: translateX(-50%) translateY(16px);
+    background: rgba(20, 9, 13, 0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 8px 20px;
     border-radius: 50px;
-    box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     text-align: center;
     z-index: 30;
     opacity: 0;
@@ -520,7 +498,7 @@
   #countdown {
     font-family: 'Outfit', sans-serif;
     font-variant-numeric: tabular-nums;
-    font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+    font-size: 0.85rem;
     font-weight: 600;
     color: #fff;
     letter-spacing: 2px;
@@ -768,16 +746,16 @@
 </main>
 
 <div id="final-message" aria-live="polite">
-  <p class="final-title">Happy 100 Days, My Darling<span class="final-sub">A hundred days, a thousand reasons</span></p>
+  <div id="message-content">
+    <p class="final-title">Happy 100 Days, My Darling<span class="final-sub">A hundred days, a thousand reasons</span></p>
+  </div>
+  <div id="gallery-button-content">
+    <button id="open-gallery-btn" onclick="openGallery()">Open Gallery</button>
+  </div>
 </div>
 
 <div class="countdown-container" id="countdown-section">
   <div id="countdown">00:00:00:00</div>
-</div>
-
-<div id="gallery-dock-trigger" aria-hidden="true"></div>
-<div id="gallery-dock">
-  <button id="open-gallery-btn" onclick="openGallery()">Open Gallery</button>
 </div>
 
 <div id="cube-gallery-overlay" role="dialog" aria-modal="true" aria-label="Photo gallery">
@@ -1126,35 +1104,48 @@
     const wrapper = document.getElementById('primary-ui-wrapper');
     const flash = document.getElementById('celebration-flash');
     const finalMessage = document.getElementById('final-message');
+    const messageContent = document.getElementById('message-content');
+    const galleryButtonContent = document.getElementById('gallery-button-content');
+
+    const burst = (n) => { for (let i = 0; i < n; i++) createConfettiParticle(); };
 
     card.classList.add('celebrate');
     heart.classList.remove('heart-pulse');
     heart.classList.add('heart-explode');
 
-    // A bright radial flash at the moment of completion — the "extravagant" beat.
-    if (!reduceMotion) {
-      flash.classList.add('firing');
-      setTimeout(() => flash.classList.remove('firing'), 1200);
-    }
-
-    // Three staggered confetti bursts read as far more celebratory than one dump.
-    const burst = (count) => { for (let i = 0; i < count; i++) createConfettiParticle(); };
-    if (!reduceMotion) {
-      burst(150);
-      setTimeout(() => burst(110), 350);
-      setTimeout(() => burst(90), 750);
-    }
-
     setTimeout(() => card.classList.remove('celebrate'), 2200);
 
-    // The whole card phases away, leaving only the floating message —
-    // and the finished collage — visible behind it.
+    // Step 1 — the card fades away completely first, clearing the stage.
     setTimeout(() => {
       wrapper.classList.add('phased-out');
+    }, 2200);
+
+    // Step 2 — once the card is gone, THIS is the celebration moment:
+    // the flash and confetti fire over the now-visible collage.
+    setTimeout(() => {
+      if (!reduceMotion) {
+        flash.classList.add('firing');
+        setTimeout(() => flash.classList.remove('firing'), 1200);
+        burst(150);
+        setTimeout(() => burst(110), 350);
+        setTimeout(() => burst(90), 750);
+      }
+    }, 3400);
+
+    // Step 3 — the message fades in to the freshly-cleared center.
+    setTimeout(() => {
+      messageContent.classList.add('shown');
       finalMessage.classList.add('visible');
-      document.getElementById('gallery-dock-trigger').classList.add('enabled');
-      document.getElementById('gallery-dock').classList.add('enabled');
-    }, 3000);
+    }, 4000);
+
+    // Step 4 — after holding for ~10s, the message fades out and the
+    // gallery button fades in to take its exact place.
+    setTimeout(() => {
+      messageContent.classList.remove('shown');
+    }, 14000);
+    setTimeout(() => {
+      galleryButtonContent.classList.add('shown');
+    }, 15000);
 
     setTimeout(revealCountdown, 4500);
     startCountdown();
