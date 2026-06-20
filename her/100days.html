@@ -981,13 +981,16 @@
       if (reduceMotion) return;
       try {
         if (soundType === 'talking') {
+          sansTalking.pause();
           sansTalking.currentTime = 0;
           sansTalking.play().catch(() => {});
         } else if (soundType === 'voice-double') {
+          voiceSans.pause();
           voiceSans.currentTime = 0;
           voiceSans.play().catch(() => {});
           // A second, independent Audio instance so the two playbacks can
           // genuinely overlap rather than the second cutting the first off.
+          voiceSansEcho.pause();
           voiceSansEcho.currentTime = 0;
           voiceSansEcho.play().catch(() => {});
         }
@@ -1009,10 +1012,13 @@
           return;
         }
         const ch = fullLine[charIndex];
-        textNode.textContent += ch;
-        // Fires the instant each character (including the very first) is
-        // typed, so the sound starts right as the text starts appearing.
+        // Sound is triggered BEFORE the text update. Playing audio has a
+        // small inherent startup latency (seeking to 0, asking the media
+        // pipeline to begin) that a DOM text paint doesn't — firing the
+        // sound first lets that latency overlap with the glyph appearing
+        // instead of trailing behind it.
         if (ch.trim() !== '') playSoundForLine(currentLine.sound);
+        textNode.textContent += ch;
         charIndex++;
         typeTimeout = setTimeout(step, 55);
       }
@@ -1563,8 +1569,8 @@
   }
 
   // ---------- Gallery mascots — Sylveon and Flareon play a sound on click ----------
-  const sylveonSound = new Audio('ai_ni.mp3');
-  const flareonSound = new Audio('love_you.mp3');
+  const sylveonSound = new Audio('ai ni.mp3');
+  const flareonSound = new Audio('love you.mp3');
   sylveonSound.volume = 0.7;
   flareonSound.volume = 0.7;
 
