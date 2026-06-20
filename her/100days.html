@@ -675,16 +675,13 @@
   }
 
   /* ---------- Gallery companions — Flareon & Sylveon flanking the photo ---------- */
-  /* Their horizontal position is calculated in JS (positionMascots()) so
-     they always sit the same fixed gap from the active photo's actual
-     edge — narrow portrait photos and wide landscape photos both get
-     correctly equidistant mascots, never a lopsided or crowded gap.
-     The 25%/75% here only matters for the very first paint, before JS
-     has measured anything yet. */
+  /* Both sit a fixed distance from the gallery stage's own left/right
+     border (not a percentage, not relative to the photo) — so they're
+     always equally far from the edge of the screen no matter how wide
+     or narrow the active photo happens to be. */
   .gallery-mascot {
     position: absolute;
     top: 50%;
-    left: 25%;
     width: clamp(90px, 12vw, 160px);
     height: auto;
     transform: translate(-50%, -50%);
@@ -694,7 +691,8 @@
     cursor: pointer;
   }
 
-  .mascot-right { left: 75%; }
+  .mascot-left { left: var(--mascot-border-inset, 70px); }
+  .mascot-right { left: calc(100% - var(--mascot-border-inset, 70px)); }
 
   .gallery-mascot:hover,
   .gallery-mascot:focus-visible {
@@ -873,7 +871,7 @@
   <p id="intro-skip-hint">click, tap, or press any key to continue</p>
 </div>
 
-<audio id="bg-music" src="song.mp3" loop preload="auto"></audio>
+<audio id="bg-music" preload="auto"></audio>
 <button id="music-toggle" aria-label="Mute background music" aria-pressed="false">
   <span id="music-icon" aria-hidden="true">♪</span>
 </button>
@@ -1123,28 +1121,57 @@
   let musicMuted = false;
 
   const TARGET_MUSIC_VOLUME = 0.55;
+  const FADE_DURATION_MS = 3000;
 
-  function startMusicOnce() {
-    if (musicStarted) return;
-    musicStarted = true;
+  // The playlist: song.mp3 plays first, then song2.mp3, then song3.mp3 —
+  // each one easing in from silence the same way. Once song3 finishes,
+  // it loops back around to song.mp3 so the music keeps going rather
+  // than going silent for the rest of the visit.
+  const musicPlaylist = ['song.mp3', 'song2.mp3', 'song3.mp3'];
+  let currentTrackIndex = 0;
+  let fadeInterval = null;
+
+  function fadeInCurrentTrack() {
+    if (fadeInterval) clearInterval(fadeInterval);
     bgMusic.volume = 0;
+    // 3 second fade: low volume at the start, slowly building to the
+    // normal target volume rather than jumping straight there.
+    const tickMs = 60;
+    const steps = FADE_DURATION_MS / tickMs;
+    const fadeStep = TARGET_MUSIC_VOLUME / steps;
+    fadeInterval = setInterval(() => {
+      const next = bgMusic.volume + fadeStep;
+      if (next >= TARGET_MUSIC_VOLUME) {
+        bgMusic.volume = TARGET_MUSIC_VOLUME;
+        clearInterval(fadeInterval);
+        fadeInterval = null;
+      } else {
+        bgMusic.volume = next;
+      }
+    }, tickMs);
+  }
+
+  function playTrack(index) {
+    currentTrackIndex = index % musicPlaylist.length;
+    bgMusic.src = musicPlaylist[currentTrackIndex];
     bgMusic.play().then(() => {
-      // Ease the music in over ~1.3s — enough to feel like a deliberate
-      // fade rather than a hard jump, without dragging.
-      const fadeStep = 0.026;
-      const fadeInterval = setInterval(() => {
-        const next = bgMusic.volume + fadeStep;
-        if (next >= TARGET_MUSIC_VOLUME) {
-          bgMusic.volume = TARGET_MUSIC_VOLUME;
-          clearInterval(fadeInterval);
-        } else {
-          bgMusic.volume = next;
-        }
-      }, 60);
+      fadeInCurrentTrack();
     }).catch(() => {
       // Autoplay can still be blocked in some browsers even after a
       // gesture (e.g. iOS quirks) — fail silently, the toggle still works.
     });
+  }
+
+  // When the current track ends, move on to the next one in the playlist —
+  // wrapping back to the start once song3.mp3 finishes.
+  bgMusic.addEventListener('ended', () => {
+    playTrack(currentTrackIndex + 1);
+  });
+
+  function startMusicOnce() {
+    if (musicStarted) return;
+    musicStarted = true;
+    playTrack(0);
   }
 
   musicToggle.addEventListener('click', () => {
@@ -1483,13 +1510,6 @@
         if (img.naturalWidth && img.naturalHeight) {
           item.style.setProperty('--card-ratio', `${img.naturalWidth} / ${img.naturalHeight}`);
         }
-        // If this card just became correctly sized AND it's the one
-        // currently on screen, the mascots' gap needs to be recalculated —
-        // a lazy-loaded image can finish resizing its card well after the
-        // initial measurement ran.
-        if (index === currentActiveCubeIndex) {
-          requestAnimationFrame(positionMascots);
-        }
       });
 
       item.appendChild(img);
@@ -1551,50 +1571,11 @@
     } else {
       indexTag.innerText = `✦ A Secret Memory ✦`;
     }
-
-    // Deferred one frame so the active card's box has settled (its size
-    // change from aspect-ratio is instant, but giving layout a frame to
-    // catch up keeps the measurement reliable).
-    requestAnimationFrame(positionMascots);
-  }
-
-  // ---------- Keep Flareon and Sylveon equidistant from whichever photo
-  // is currently active, regardless of whether it's landscape, portrait,
-  // or square. Measures the active card's real rendered edges and places
-  // each mascot a fixed gap outside them. ----------
-  const MASCOT_GAP_PX = 28;
-
-  function positionMascots() {
-    const stage = document.querySelector('.gallery-stage');
-    const sylveonImg = document.getElementById('mascot-sylveon');
-    const flareonImg = document.getElementById('mascot-flareon');
-    const activeCard = document.getElementById(`cube-card-${currentActiveCubeIndex}`);
-    if (!stage || !sylveonImg || !flareonImg || !activeCard) return;
-
-    const stageRect = stage.getBoundingClientRect();
-    const cardRect = activeCard.getBoundingClientRect();
-    if (cardRect.width === 0) return; // not yet laid out — fallback CSS % holds until next call
-
-    const sylveonHalfWidth = sylveonImg.getBoundingClientRect().width / 2;
-    const flareonHalfWidth = flareonImg.getBoundingClientRect().width / 2;
-
-    // Card edges relative to the stage, since mascots are positioned
-    // with `left` relative to that same stage.
-    const cardLeftInStage = cardRect.left - stageRect.left;
-    const cardRightInStage = cardRect.right - stageRect.left;
-
-    // left CSS value is the mascot's CENTER (transform: translate(-50%, -50%)),
-    // so the gap is measured from the photo edge to the mascot's near edge.
-    const sylveonLeft = cardLeftInStage - MASCOT_GAP_PX - sylveonHalfWidth;
-    const flareonLeft = cardRightInStage + MASCOT_GAP_PX + flareonHalfWidth;
-
-    sylveonImg.style.left = `${sylveonLeft}px`;
-    flareonImg.style.left = `${flareonLeft}px`;
   }
 
   // ---------- Gallery mascots — Sylveon and Flareon play a sound on click ----------
-  const sylveonSound = new Audio('ai ni.mp3');
-  const flareonSound = new Audio('love you.mp3');
+  const sylveonSound = new Audio('ai_ni.mp3');
+  const flareonSound = new Audio('love_you.mp3');
   sylveonSound.volume = 0.7;
   flareonSound.volume = 0.7;
 
