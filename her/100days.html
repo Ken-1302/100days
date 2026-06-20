@@ -79,6 +79,52 @@
     border: 0;
   }
 
+  /* ---------- Background music toggle ---------- */
+  #music-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 70;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(157, 36, 73, 0.18);
+    background: rgba(255, 252, 249, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--rose-deep);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 22px -8px rgba(157, 36, 73, 0.3);
+    transition: transform 0.3s var(--ease-soft), opacity 0.3s ease, background 0.3s ease;
+  }
+
+  #music-toggle:hover {
+    transform: scale(1.08);
+  }
+
+  #music-toggle.muted {
+    color: var(--ink-soft);
+    opacity: 0.6;
+  }
+
+  #music-toggle.muted #music-icon::after {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 1.5px;
+    background: var(--ink-soft);
+    transform: rotate(-45deg);
+  }
+
+  #music-icon {
+    position: relative;
+    display: inline-block;
+  }
+
   /* ---------- Photo grid (the keepsake collage) ---------- */
   #grid-container {
     position: fixed;
@@ -256,7 +302,7 @@
     box-shadow: 0 0 0 1px rgba(201, 161, 92, 0.5), 0 40px 100px -10px rgba(157, 36, 73, 0.6);
   }
 
-  /* ---------- Final message slot — message and gallery button share this spot ---------- */
+  /* ---------- Final message — all that's left after the card fades ---------- */
   #final-message {
     position: fixed;
     top: 50%;
@@ -274,25 +320,6 @@
   #final-message.visible {
     opacity: 1;
     transform: translate(-50%, -50%) translateY(0);
-    pointer-events: auto;
-  }
-
-  #message-content,
-  #gallery-button-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    opacity: 0;
-    transition: opacity 1s var(--ease-soft);
-    pointer-events: none;
-  }
-
-  #message-content.shown,
-  #gallery-button-content.shown {
-    opacity: 1;
-    pointer-events: auto;
   }
 
   .final-title {
@@ -335,26 +362,6 @@
     0% { opacity: 0; transform: scale(0.6); }
     18% { opacity: 1; transform: scale(1.15); }
     100% { opacity: 0; transform: scale(1.8); }
-  }
-
-  #open-gallery-btn {
-    padding: 15px 40px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    font-family: 'Outfit', sans-serif;
-    color: #fff;
-    background: linear-gradient(135deg, var(--gold-soft), var(--gold));
-    border: none;
-    border-radius: 50px;
-    cursor: pointer;
-    box-shadow: 0 14px 38px -8px rgba(201, 161, 92, 0.55);
-    transition: transform 0.3s var(--ease-soft), box-shadow 0.3s var(--ease-soft);
-    letter-spacing: 0.5px;
-  }
-
-  #open-gallery-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 18px 44px -8px rgba(201, 161, 92, 0.65);
   }
 
 
@@ -563,7 +570,7 @@
   .cube-card img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
   }
 
@@ -713,6 +720,11 @@
 </head>
 <body>
 
+<audio id="bg-music" src="song.mp3" loop preload="auto"></audio>
+<button id="music-toggle" aria-label="Mute background music" aria-pressed="false">
+  <span id="music-icon" aria-hidden="true">♪</span>
+</button>
+
 <div id="grid-container" aria-hidden="true"></div>
 
 <div id="celebration-flash" aria-hidden="true"></div>
@@ -746,12 +758,7 @@
 </main>
 
 <div id="final-message" aria-live="polite">
-  <div id="message-content">
-    <p class="final-title">Happy 100 Days, My Darling<span class="final-sub">A hundred days, a thousand reasons</span></p>
-  </div>
-  <div id="gallery-button-content">
-    <button id="open-gallery-btn" onclick="openGallery()">Open Gallery</button>
-  </div>
+  <p class="final-title">Happy 100 Days, My Darling<span class="final-sub">A hundred days, a thousand reasons</span></p>
 </div>
 
 <div class="countdown-container" id="countdown-section">
@@ -779,6 +786,7 @@
 
   const TOTAL_DAYS = 100;
   const TOTAL_AVAILABLE_IMAGES = 111;
+  const GALLERY_SIZE = TOTAL_AVAILABLE_IMAGES; // gallery carousel includes the 11 secret extras
   const ANNIVERSARY_TARGET = new Date("July 1, 2026 22:00:00").getTime();
   const PHOTO_HOLD_MS = 3000;
   const CUBE_RADIUS = 600;
@@ -811,6 +819,12 @@
     [imagePool[i], imagePool[j]] = [imagePool[j], imagePool[i]];
   }
   const definitiveSelection = imagePool.slice(0, TOTAL_DAYS);
+
+  // The remaining 11 photos never appear in the grid — they're folded into
+  // the gallery carousel as a hidden continuation past "Memory 100 of 100",
+  // only found by someone who keeps scrolling.
+  const secretSelection = imagePool.slice(TOTAL_DAYS);
+  const gallerySelection = definitiveSelection.concat(secretSelection);
 
   // ---------- Optional external captions file ----------
   fetch('celineCaptions.txt')
@@ -845,6 +859,40 @@
     frag.appendChild(row);
   }
   gridContainer.appendChild(frag);
+
+  // ---------- Background music ----------
+  // Browsers block audio with sound until the person interacts with the
+  // page, so playback starts on the very first click/tap/keypress —
+  // whichever comes first — rather than being tied to any one button.
+  const bgMusic = document.getElementById('bg-music');
+  const musicToggle = document.getElementById('music-toggle');
+  let musicStarted = false;
+  let musicMuted = false;
+
+  function startMusicOnce() {
+    if (musicStarted) return;
+    musicStarted = true;
+    bgMusic.volume = 0.55;
+    bgMusic.play().catch(() => {
+      // Autoplay can still be blocked in some browsers even after a
+      // gesture (e.g. iOS quirks) — fail silently, the toggle still works.
+    });
+  }
+
+  ['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, startMusicOnce, { once: true, passive: true });
+  });
+
+  musicToggle.addEventListener('click', () => {
+    musicMuted = !musicMuted;
+    bgMusic.muted = musicMuted;
+    musicToggle.classList.toggle('muted', musicMuted);
+    musicToggle.setAttribute('aria-pressed', String(musicMuted));
+    musicToggle.setAttribute('aria-label', musicMuted ? 'Unmute background music' : 'Mute background music');
+    // If music hadn't started yet (e.g. the very first tap was on this
+    // button itself), starting it here still respects the gesture rule.
+    if (!musicStarted && !musicMuted) startMusicOnce();
+  });
 
   // ---------- Keyboard controls ----------
   window.addEventListener('keydown', (e) => {
@@ -1104,8 +1152,6 @@
     const wrapper = document.getElementById('primary-ui-wrapper');
     const flash = document.getElementById('celebration-flash');
     const finalMessage = document.getElementById('final-message');
-    const messageContent = document.getElementById('message-content');
-    const galleryButtonContent = document.getElementById('gallery-button-content');
 
     const burst = (n) => { for (let i = 0; i < n; i++) createConfettiParticle(); };
 
@@ -1132,20 +1178,11 @@
       }
     }, 3400);
 
-    // Step 3 — the message fades in to the freshly-cleared center.
+    // Step 3 — the message fades in to the freshly-cleared center and stays.
+    // The gallery is reachable by clicking any photo in the finished collage.
     setTimeout(() => {
-      messageContent.classList.add('shown');
       finalMessage.classList.add('visible');
     }, 4000);
-
-    // Step 4 — after holding for ~10s, the message fades out and the
-    // gallery button fades in to take its exact place.
-    setTimeout(() => {
-      messageContent.classList.remove('shown');
-    }, 14000);
-    setTimeout(() => {
-      galleryButtonContent.classList.add('shown');
-    }, 15000);
 
     setTimeout(revealCountdown, 4500);
     startCountdown();
@@ -1153,12 +1190,14 @@
   }
 
   // ---------- 3D keepsake carousel ----------
+  // Includes all 111 photos: the 100 "Memory X of 100" ones, plus 11 secret
+  // extras tucked on at the end — only found by someone who keeps scrolling.
   function initializeCubeData() {
     const cubeWrapper = document.getElementById('cube-wrapper');
     cubeWrapper.innerHTML = '';
 
     const frag = document.createDocumentFragment();
-    definitiveSelection.forEach((imageNumber, index) => {
+    gallerySelection.forEach((imageNumber, index) => {
       const item = document.createElement('div');
       item.className = 'cube-card';
       item.id = `cube-card-${index}`;
@@ -1166,7 +1205,9 @@
       const img = document.createElement('img');
       img.src = `Celine/Celine (${imageNumber}).webp`;
       img.loading = 'lazy';
-      img.alt = `Memory ${index + 1} of ${TOTAL_DAYS}`;
+      img.alt = index < TOTAL_DAYS
+        ? `Memory ${index + 1} of ${TOTAL_DAYS}`
+        : `A secret memory`;
 
       item.appendChild(img);
       frag.appendChild(item);
@@ -1175,8 +1216,8 @@
   }
 
   function buildCubeLayout() {
-    const anglePerItem = 360 / TOTAL_DAYS;
-    definitiveSelection.forEach((_, index) => {
+    const anglePerItem = 360 / GALLERY_SIZE;
+    gallerySelection.forEach((_, index) => {
       const item = document.getElementById(`cube-card-${index}`);
       if (!item) return;
       const itemAngle = anglePerItem * index;
@@ -1186,22 +1227,22 @@
   }
 
   window.rotateCube = function rotateCube(direction) {
-    currentActiveCubeIndex = (currentActiveCubeIndex + direction + TOTAL_DAYS) % TOTAL_DAYS;
+    currentActiveCubeIndex = (currentActiveCubeIndex + direction + GALLERY_SIZE) % GALLERY_SIZE;
     updateCubeRenderingState();
   };
 
   function updateCubeRenderingState() {
     const cubeWrapper = document.getElementById('cube-wrapper');
-    const anglePerItem = 360 / TOTAL_DAYS;
+    const anglePerItem = 360 / GALLERY_SIZE;
     const finalAngle = -anglePerItem * currentActiveCubeIndex;
     cubeWrapper.style.transform = `translateZ(-${CUBE_RADIUS}px) rotateY(${finalAngle}deg)`;
 
-    definitiveSelection.forEach((_, index) => {
+    gallerySelection.forEach((_, index) => {
       const item = document.getElementById(`cube-card-${index}`);
       if (!item) return;
 
       let diff = Math.abs(index - currentActiveCubeIndex);
-      if (diff > TOTAL_DAYS / 2) diff = TOTAL_DAYS - diff;
+      if (diff > GALLERY_SIZE / 2) diff = GALLERY_SIZE - diff;
 
       if (diff === 0) {
         item.style.opacity = '1';
@@ -1214,14 +1255,20 @@
       }
     });
 
-    const activeImgNum = definitiveSelection[currentActiveCubeIndex];
+    const activeImgNum = gallerySelection[currentActiveCubeIndex];
     document.getElementById('photo-caption').innerText = getCaptionForImage(activeImgNum);
-    document.getElementById('photo-index-tag').innerText = `Memory ${currentActiveCubeIndex + 1} of ${TOTAL_DAYS}`;
+
+    const indexTag = document.getElementById('photo-index-tag');
+    if (currentActiveCubeIndex < TOTAL_DAYS) {
+      indexTag.innerText = `Memory ${currentActiveCubeIndex + 1} of ${TOTAL_DAYS}`;
+    } else {
+      indexTag.innerText = `✦ A Secret Memory ✦`;
+    }
   }
 
   window.openGallery = function openGallery(startIndex) {
     isGalleryActive = true;
-    if (typeof startIndex === 'number' && startIndex >= 0 && startIndex < TOTAL_DAYS) {
+    if (typeof startIndex === 'number' && startIndex >= 0 && startIndex < GALLERY_SIZE) {
       currentActiveCubeIndex = startIndex;
     }
 
