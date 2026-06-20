@@ -943,21 +943,18 @@
   // the romantic page stay inert until the opening message has finished.
   let introActive = true;
 
-  // ---------- Opening intro — black screen, typewriter text, blip sound ----------
+  // ---------- Opening intro — black screen, typewriter text ----------
   (function runIntro() {
     const overlay = document.getElementById('intro-overlay');
     const textNode = document.getElementById('intro-text');
     const advanceIndicator = document.getElementById('intro-advance-indicator');
 
-    // Each line has its own sound profile:
-    //  - 'talking'      → sans_talking.mp3, retriggered once per character
-    //  - 'voice-double' → voice_sans.mp3, retriggered TWICE per character
     const lines = [
-      { text: "...", sound: 'talking' },
-      { text: "Hi Celine Khoo Hui Wen,\nHope you enjoyed the concert just now.", sound: 'talking' },
-      { text: "The flowers and chocolate aren't the only surprise tonight though.", sound: 'talking' },
-      { text: "Enjoy.", sound: 'voice-double' },
-      { text: "I love you, my darling.", sound: 'talking' }
+      "...",
+      "Hi Celine Khoo Hui Wen,\nHope you enjoyed the concert just now.",
+      "The flowers and chocolate aren't the only surprise tonight though.",
+      "Enjoy.",
+      "I love you, my darling."
     ];
 
     let lineIndex = 0;
@@ -966,67 +963,14 @@
     let typeTimeout = null;
     let introDone = false;
 
-    // sans_talking.mp3 — used for most lines, retriggered per character.
-    const sansTalking = new Audio('sans_talking.mp3');
-    sansTalking.volume = 0.5;
-    sansTalking.preload = 'auto';
-
-    // voice_sans.mp3 — the single short "urh" sample, used for "Enjoy."
-    // where it's asked to play TWICE per character instead of once.
-    const voiceSans = new Audio('voice_sans.mp3');
-    voiceSans.volume = 0.5;
-    voiceSans.preload = 'auto';
-    const voiceSansEcho = new Audio('voice_sans.mp3');
-    voiceSansEcho.volume = 0.5;
-    voiceSansEcho.preload = 'auto';
-
-    // The very first time an <audio> element plays, the browser may still
-    // be fetching/decoding it — that cold-start delay is what was making
-    // the sound trail behind the very first characters typed. Forcing
-    // .load() immediately, and waiting for it to actually be ready before
-    // typing begins, closes that gap. A safety timeout keeps the intro
-    // from hanging if a file is slow or missing.
-    function waitUntilReady(audioEl, timeoutMs) {
-      return new Promise((resolve) => {
-        if (audioEl.readyState >= 3) { resolve(); return; }
-        let settled = false;
-        const done = () => {
-          if (settled) return;
-          settled = true;
-          audioEl.removeEventListener('canplaythrough', done);
-          resolve();
-        };
-        audioEl.addEventListener('canplaythrough', done);
-        audioEl.load();
-        setTimeout(done, timeoutMs);
-      });
-    }
-
-    function playSoundForLine(soundType) {
-      if (reduceMotion) return;
-      try {
-        if (soundType === 'talking') {
-          sansTalking.pause();
-          sansTalking.currentTime = 0;
-          sansTalking.play().catch(() => {});
-        } else if (soundType === 'voice-double') {
-          voiceSans.pause();
-          voiceSans.currentTime = 0;
-          voiceSans.play().catch(() => {});
-          // A second, independent Audio instance so the two playbacks can
-          // genuinely overlap rather than the second cutting the first off.
-          voiceSansEcho.pause();
-          voiceSansEcho.currentTime = 0;
-          voiceSansEcho.play().catch(() => {});
-        }
-      } catch (e) { /* fails silently — typing still works without sound */ }
-    }
-
     function typeLine() {
       typing = true;
       advanceIndicator.classList.remove('visible');
-      const currentLine = lines[lineIndex];
-      const fullLine = currentLine.text;
+      const fullLine = lines[lineIndex];
+      // The final "I love you, my darling" line types out a touch slower
+      // than the rest, so it lands with a little more weight.
+      const isFinalLine = lineIndex === lines.length - 1;
+      const typingSpeed = isFinalLine ? 80 : 55;
       textNode.textContent = '';
       charIndex = 0;
 
@@ -1037,22 +981,16 @@
           return;
         }
         const ch = fullLine[charIndex];
-        // Sound is triggered BEFORE the text update. Playing audio has a
-        // small inherent startup latency (seeking to 0, asking the media
-        // pipeline to begin) that a DOM text paint doesn't — firing the
-        // sound first lets that latency overlap with the glyph appearing
-        // instead of trailing behind it.
-        if (ch.trim() !== '') playSoundForLine(currentLine.sound);
         textNode.textContent += ch;
         charIndex++;
-        typeTimeout = setTimeout(step, 55);
+        typeTimeout = setTimeout(step, typingSpeed);
       }
       step();
     }
 
     function skipTyping() {
       clearTimeout(typeTimeout);
-      textNode.textContent = lines[lineIndex].text;
+      textNode.textContent = lines[lineIndex];
       typing = false;
       advanceIndicator.classList.add('visible');
     }
@@ -1095,19 +1033,7 @@
     overlay.addEventListener('click', advance);
     window.addEventListener('keydown', introKeyHandler);
 
-    // Wait for the talking sound to actually be ready before the first
-    // character ever types — this is what closes the gap between text
-    // and sound on box 1, since that's where the cold-start delay was
-    // most noticeable. Capped at 700ms so a slow connection or missing
-    // file never holds up the opening message for long.
-    waitUntilReady(sansTalking, 700).then(() => {
-      typeLine();
-    });
-    // voiceSans/voiceSansEcho aren't on the critical path for the very
-    // first character, but kicking off their loading now too means
-    // they're already warm well before box 4 ("Enjoy.") is reached.
-    voiceSans.load();
-    voiceSansEcho.load();
+    typeLine();
   })();
 
   const captionsPlaceholderList = [
@@ -1193,8 +1119,9 @@
     musicStarted = true;
     bgMusic.volume = 0;
     bgMusic.play().then(() => {
-      // Ease the music in over ~2.5s rather than starting at full volume.
-      const fadeStep = 0.025;
+      // Ease the music in over ~1.3s — enough to feel like a deliberate
+      // fade rather than a hard jump, without dragging.
+      const fadeStep = 0.026;
       const fadeInterval = setInterval(() => {
         const next = bgMusic.volume + fadeStep;
         if (next >= TARGET_MUSIC_VOLUME) {
@@ -1203,7 +1130,7 @@
         } else {
           bgMusic.volume = next;
         }
-      }, 110);
+      }, 60);
     }).catch(() => {
       // Autoplay can still be blocked in some browsers even after a
       // gesture (e.g. iOS quirks) — fail silently, the toggle still works.
@@ -1606,8 +1533,8 @@
   }
 
   // ---------- Gallery mascots — Sylveon and Flareon play a sound on click ----------
-  const sylveonSound = new Audio('ai_ni.mp3');
-  const flareonSound = new Audio('love_you.mp3');
+  const sylveonSound = new Audio('ai ni.mp3');
+  const flareonSound = new Audio('love you.mp3');
   sylveonSound.volume = 0.7;
   flareonSound.volume = 0.7;
 
