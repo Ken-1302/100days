@@ -8,7 +8,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Outfit:wght@300;400;500;600&family=Shadows+Into+Light&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Outfit:wght@300;400;500;600&family=Shadows+Into+Light&family=DotGothic16&display=swap" rel="stylesheet">
 
 <style>
   :root {
@@ -179,9 +179,9 @@
   #intro-text {
     margin: 0;
     color: #fff;
-    font-family: 'Outfit', monospace;
-    font-size: clamp(1.05rem, 2.6vw, 1.4rem);
-    line-height: 1.7;
+    font-family: 'DotGothic16', monospace;
+    font-size: clamp(1.1rem, 2.8vw, 1.5rem);
+    line-height: 1.85;
     letter-spacing: 0.5px;
     white-space: pre-wrap;
   }
@@ -663,6 +663,40 @@
     display: block;
   }
 
+  /* ---------- Gallery companions — Flareon & Sylveon flanking the photo ---------- */
+  .gallery-mascot {
+    position: absolute;
+    top: 50%;
+    width: clamp(90px, 12vw, 160px);
+    height: auto;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5));
+    transition: filter 0.3s ease;
+    cursor: pointer;
+  }
+
+  .mascot-flareon { left: 25%; }
+  .mascot-sylveon { left: 75%; }
+
+  .gallery-mascot:hover,
+  .gallery-mascot:focus-visible {
+    animation: mascotJiggle 0.5s ease-in-out infinite;
+    filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.6)) brightness(1.08);
+  }
+
+  @keyframes mascotJiggle {
+    0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    20% { transform: translate(-50%, -50%) rotate(-6deg) scale(1.04); }
+    40% { transform: translate(-50%, -50%) rotate(5deg) scale(1.05); }
+    60% { transform: translate(-50%, -50%) rotate(-4deg) scale(1.04); }
+    80% { transform: translate(-50%, -50%) rotate(3deg) scale(1.02); }
+  }
+
+  @media (max-width: 700px) {
+    .gallery-mascot { display: none; }
+  }
+
   .gallery-nav-btn {
     position: absolute;
     top: 50%;
@@ -868,7 +902,9 @@
   <button class="gallery-nav-btn nav-right" onclick="rotateCube(1)" aria-label="Next photo">›</button>
 
   <div class="gallery-stage">
+    <img class="gallery-mascot mascot-flareon" src="flareon.png" alt="Flareon" loading="lazy">
     <div class="cube-carousel" id="cube-wrapper"></div>
+    <img class="gallery-mascot mascot-sylveon" src="sylveon.png" alt="Sylveon" loading="lazy">
   </div>
 
   <div class="gallery-caption-box">
@@ -914,34 +950,23 @@
     let typeTimeout = null;
     let introDone = false;
 
-    // A tiny synthesized blip per character — the "Sans voice" effect —
-    // built with the Web Audio API so no external sound file is needed.
-    let audioCtx = null;
-    function getAudioCtx() {
-      if (!audioCtx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx) audioCtx = new Ctx();
-      }
-      return audioCtx;
-    }
+    // The "Sans voice" effect — voice_sans.mp3 is one short "urh" sample.
+    // Restarting it from 0 on every typed character chops it into a quick
+    // blip in time with the typing, recreating the classic Undertale sound
+    // even though the source file only has the one clip.
+    const voiceSans = new Audio('voice_sans.mp3');
+    voiceSans.volume = 0.5;
 
     function playBlip() {
       if (reduceMotion) return;
-      const ctx = getAudioCtx();
-      if (!ctx) return;
       try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'square';
-        const basePitch = 320;
-        osc.frequency.value = basePitch + Math.random() * 60;
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.045);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.05);
-      } catch (e) { /* audio not available — intro still works silently */ }
+        voiceSans.currentTime = 0;
+        voiceSans.play().catch(() => {
+          // Some browsers block audio before any interaction at all —
+          // the very first character or two may be silent, the rest
+          // will play normally once the click-to-advance gesture lands.
+        });
+      } catch (e) { /* fails silently — typing still works without sound */ }
     }
 
     function typeLine() {
@@ -961,7 +986,7 @@
         textNode.textContent += ch;
         if (ch.trim() !== '') playBlip();
         charIndex++;
-        typeTimeout = setTimeout(step, 38);
+        typeTimeout = setTimeout(step, 55);
       }
       step();
     }
@@ -989,12 +1014,15 @@
 
     function finishIntro() {
       introDone = true;
-      introActive = false;
       overlay.removeEventListener('click', advance);
       window.removeEventListener('keydown', introKeyHandler);
       overlay.classList.add('intro-hidden');
       document.body.classList.remove('pre-intro');
       setTimeout(() => { overlay.style.display = 'none'; }, 1200);
+      // The card fades in over 1.1s (see .card-wrapper transition) — only
+      // once that's actually finished do we let "Press Me" become usable,
+      // so the very first photo can never appear ahead of the card itself.
+      setTimeout(() => { introActive = false; }, 1300);
     }
 
     function introKeyHandler(e) {
@@ -1076,8 +1104,10 @@
 
   // ---------- Background music ----------
   // Browsers block audio with sound until the person interacts with the
-  // page, so playback starts on the very first click/tap/keypress —
-  // whichever comes first — rather than being tied to any one button.
+  // page — but rather than starting on any arbitrary first click (which
+  // could fire during the intro's own typewriter clicks), playback is
+  // explicitly kicked off the moment the first photo actually appears
+  // on screen, inside spawnAndFlyImage() below.
   const bgMusic = document.getElementById('bg-music');
   const musicToggle = document.getElementById('music-toggle');
   let musicStarted = false;
@@ -1093,18 +1123,14 @@
     });
   }
 
-  ['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
-    window.addEventListener(evt, startMusicOnce, { once: true, passive: true });
-  });
-
   musicToggle.addEventListener('click', () => {
     musicMuted = !musicMuted;
     bgMusic.muted = musicMuted;
     musicToggle.classList.toggle('muted', musicMuted);
     musicToggle.setAttribute('aria-pressed', String(musicMuted));
     musicToggle.setAttribute('aria-label', musicMuted ? 'Unmute background music' : 'Mute background music');
-    // If music hadn't started yet (e.g. the very first tap was on this
-    // button itself), starting it here still respects the gesture rule.
+    // If music hadn't started yet, starting it here still respects the
+    // gesture rule — clicking the toggle itself counts as interaction.
     if (!musicStarted && !musicMuted) startMusicOnce();
   });
 
@@ -1141,6 +1167,7 @@
   });
 
   window.increment = function increment() {
+    if (introActive) return;
     if (count >= TOTAL_DAYS) {
       createHeart();
       return;
@@ -1172,6 +1199,9 @@
   // once you're done testing.
   function skipToEnd() {
     if (count >= TOTAL_DAYS) return;
+
+    // Dev shortcut also counts as "the first photo is showing" — start music here too.
+    startMusicOnce();
 
     // Cancel anything mid-flight so we don't leave a stray photo on screen
     if (activeFlightTimeout) {
@@ -1253,6 +1283,10 @@
 
     captionTextNode.innerText = getCaptionForImage(imageNumber);
     captionWrapper.classList.add('visible');
+
+    // The first photo appearing on screen is the moment the music begins —
+    // not the intro, not the card, this exact reveal.
+    startMusicOnce();
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
