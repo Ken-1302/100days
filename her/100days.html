@@ -1205,15 +1205,15 @@
       'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
     const WEEKDAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
-    // The relationship's day one — the calendar tears from here forward
-    // to today's actual date, whenever the page happens to be opened.
+    // The relationship's day one through the 100th day — a fixed range,
+    // not tied to whenever the page happens to be opened.
     const startDate = new Date(2026, 2, 13); // March 13, 2026
-    const today = new Date();
+    const today = new Date(2026, 5, 21); // June 21, 2026
     today.setHours(0, 0, 0, 0);
 
     const msPerDay = 86400000;
     let totalDays = Math.round((today - startDate) / msPerDay) + 1;
-    if (totalDays < 1) totalDays = 1; // safety net if viewed before March 13 somehow
+    if (totalDays < 1) totalDays = 1; // safety net, shouldn't trigger with a fixed range
 
     let dayIndex = 0; // 0-based offset from startDate
     let montageDone = false;
@@ -1263,18 +1263,23 @@
         renderPage(dateForIndex(dayIndex));
         frontPage.classList.remove('tearing');
         tickBackgroundCounter();
+        // Only queue the NEXT tear once this one has actually finished
+        // revealing its date — scheduling it immediately (in parallel
+        // with the 220ms reveal) let tears overlap once the pace
+        // accelerated past 220ms, leaving the front page stuck mid-tear
+        // (rotated away, opacity 0) with only the blank back page showing.
+        scheduleNextTear();
       }, 220);
-
-      scheduleNextTear();
     }
 
     function scheduleNextTear() {
       if (montageDone) return;
       // Starts slow so the first several dates are readable, then
       // accelerates — by the later pages it's a quick flutter rather
-      // than sitting through 90+ individually-read days.
+      // than sitting through 90+ individually-read days. Never faster
+      // than the 220ms tear reveal itself, so pages can't overlap.
       const progress = dayIndex / totalDays;
-      const delay = Math.max(45, 420 - progress * 380);
+      const delay = Math.max(230, 420 - progress * 380);
       tearTimeout = setTimeout(tearToNext, delay);
     }
 
